@@ -11,12 +11,18 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
  private:
   static Napi::FunctionReference constructor;
 
+  Napi::Value Receive(const Napi::CallbackInfo& info);
   Napi::Value GetValue(const Napi::CallbackInfo& info);
   Napi::Value PlusOne(const Napi::CallbackInfo& info);
   Napi::Value Multiply(const Napi::CallbackInfo& info);
 
+  void ReceiveLoop(Napi::Env env);
+
   double value_;
 
+  int fd;
+
+  Napi::Function receiveCallback;
 };
 
 #endif
