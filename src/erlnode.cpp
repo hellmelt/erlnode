@@ -59,6 +59,7 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
       Napi::TypeError::New(env, "connect property string expected").ThrowAsJavaScriptException();
     }
     std::vector<char> connect = toChar(config.Get("connect"));
+    printf("Will connect to %s\n", &connect[0]);
     if ((fd = erl_connect(&connect[0])) < 0) {
     Napi::Error::New(env, "Connect failed").ThrowAsJavaScriptException();
   }
@@ -66,19 +67,23 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
 
   if (config.Has("receiveCallback")) {
   if (!config.Get("receiveCallback").IsFunction()) {
+      printf("Will start receive loop thread\n");
       Napi::TypeError::New(env, "receiveCallback property function expected").ThrowAsJavaScriptException();
   }
   receiveCallback = config.Get("receiveCallback").As<Napi::Function>();
-  std::thread receiveLoop(&ErlNode::ReceiveLoop, env);
+  std::thread receiveLoop(&ErlNode::ReceiveLoop, *this, env);
+
+  // receiveLoop.join();
   }
 }
 
 void ErlNode::ReceiveLoop(Napi::Env env) {
+  printf("Receive loop started\n");
   int loop = 1;
   unsigned char buf[256];
   ErlMessage emsg;
   int got;
-  printf("Printf works\n");
+  printf("Entering loop, fd: %d\n", fd);
   while (loop) {
     got  = erl_receive_msg(fd, buf, 256, &emsg);
     printf("Got %i\n", got);
@@ -90,14 +95,13 @@ void ErlNode::ReceiveLoop(Napi::Env env) {
         //printf("%s", buf);
         if (ERL_IS_ATOM(emsg.msg)) {
           //cb.Call(env.Global, { Napi::String::New(env, ERL_ATOM_PTR(emsg->msg))});
-          receiveCallback.Call(env.Global(), Napi::String::New(env, ERL_ATOM_PTR(emsg.msg)));
+          receiveCallback.MakeCallback(env.Global(), { Napi::String::New(env, ERL_ATOM_PTR(emsg.msg)) });
         }
       //std::cout << str;
       //std::cout << emsg;
       //loop = 0;
     }
   }
-
 }
 
 Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {

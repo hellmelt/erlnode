@@ -7,6 +7,7 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
   ErlNode(const Napi::CallbackInfo& info);
+  void ReceiveLoop(Napi::Env env);
 
  private:
   static Napi::FunctionReference constructor;
@@ -16,7 +17,6 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
   Napi::Value PlusOne(const Napi::CallbackInfo& info);
   Napi::Value Multiply(const Napi::CallbackInfo& info);
 
-  void ReceiveLoop(Napi::Env env);
 
   double value_;
 
