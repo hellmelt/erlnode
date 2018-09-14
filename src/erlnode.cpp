@@ -2,8 +2,8 @@
 #include <iostream>
 #include <thread>
 
-#include "erl_interface.h"
-#include "ei.h"
+//#include "erl_interface.h"
+//#include "ei.h"
 
 std::vector<char> toChar(Napi::Value jsString) {
   std::string cppString = jsString.ToString().Utf8Value();
@@ -48,8 +48,9 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
   std::vector<char> cookie = toChar(config.Get("cookie"));
 
   // connect_init
-  int res = erl_connect_init(1, &cookie[0], 0);
-  if (!res) {
+  int res = ei_connect_init(&cnode_, "jsnode", &cookie[0], creation_++);
+  // int res = erl_connect_init(1, &cookie[0], 0);
+  if (res < 0) {
   Napi::Error::New(env, "Connect init failed").ThrowAsJavaScriptException();
   }
 
@@ -60,9 +61,19 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
     }
     std::vector<char> connect = toChar(config.Get("connect"));
     printf("Will connect to %s\n", &connect[0]);
-    if ((fd = erl_connect(&connect[0])) < 0) {
-    Napi::Error::New(env, "Connect failed").ThrowAsJavaScriptException();
-  }
+    if ((fd = ei_connect(&cnode_, &connect[0])) < 0) {
+    // if ((fd = erl_connect(&connect[0])) < 0) {
+      if (erl_errno == EHOSTUNREACH) {
+        Napi::Error::New(env, "The remote node is unreachable").ThrowAsJavaScriptException();
+        }
+      if (erl_errno == ENOMEM) {
+        Napi::Error::New(env, "No more memory is available").ThrowAsJavaScriptException();
+        }
+      if (erl_errno == EIO) {
+        Napi::Error::New(env, "I/O Error").ThrowAsJavaScriptException();
+      }
+      Napi::Error::New(env, "Connect failed").ThrowAsJavaScriptException();
+    }
   }
 
   if (config.Has("receiveCallback")) {
@@ -71,7 +82,7 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
       Napi::TypeError::New(env, "receiveCallback property function expected").ThrowAsJavaScriptException();
   }
   receiveCallback = config.Get("receiveCallback").As<Napi::Function>();
-  std::thread receiveLoop(&ErlNode::ReceiveLoop, *this, env);
+  // std::thread receiveLoop(&ErlNode::ReceiveLoop, *this, env);
 
   // receiveLoop.join();
   }
@@ -81,11 +92,14 @@ void ErlNode::ReceiveLoop(Napi::Env env) {
   printf("Receive loop started\n");
   int loop = 1;
   unsigned char buf[256];
-  ErlMessage emsg;
+  erlang_msg emsg;
   int got;
+  ei_x_buff x;
+  ei_x_new(&x);
   printf("Entering loop, fd: %d\n", fd);
   while (loop) {
-    got  = erl_receive_msg(fd, buf, 256, &emsg);
+    got = ei_receive_msg(fd, &emsg, &x);
+    // got  = erl_receive_msg(fd, buf, 256, &emsg);
     printf("Got %i\n", got);
        if (got == ERL_TICK) {
           /* ignore */
@@ -93,9 +107,13 @@ void ErlNode::ReceiveLoop(Napi::Env env) {
           loop = 0;
         } else {
         //printf("%s", buf);
-        if (ERL_IS_ATOM(emsg.msg)) {
+        if (ERL_IS_ATOM(x.buff)) {
           //cb.Call(env.Global, { Napi::String::New(env, ERL_ATOM_PTR(emsg->msg))});
-          receiveCallback.MakeCallback(env.Global(), { Napi::String::New(env, ERL_ATOM_PTR(emsg.msg)) });
+          printf("Atom received: %s\n", x);
+          char atom[256];
+          int index = 0;
+          ei_decode_atom(x.buff, &index, atom);
+          receiveCallback.MakeCallback(env.Global(), { Napi::String::New(env, atom) });
         }
       //std::cout << str;
       //std::cout << emsg;
@@ -104,26 +122,35 @@ void ErlNode::ReceiveLoop(Napi::Env env) {
   }
 }
 
+
 Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   // Napi::Function cb = info[0].As<Napi::Function>();
   int loop = 1;
   unsigned char buf[256];
-  ErlMessage emsg;
+  erlang_msg emsg;
   int got;
-  printf("Printf works\n");
+  ei_x_buff x;
+  ei_x_new(&x);
+   printf("Printf works\n");
   while (loop) {
-    got  = erl_receive_msg(fd, buf, 256, &emsg);
+    got = ei_receive_msg(fd, &emsg, &x);
+//    got  = erl_receive_msg(fd, buf, 256, &emsg);
     printf("Got %i\n", got);
        if (got == ERL_TICK) {
-          /* ignore */
+        // ignore
         } else if (got == ERL_ERROR) {
           loop = 0;
         } else {
-        //printf("%s", buf);
-        if (ERL_IS_ATOM(emsg.msg)) {
+        printf("Received: %s\n", x.buff);
+        if (true) {
+                  printf("Atom received: %s\n", x.buff);
+                  char atom[256];
+                  int index = 0;
+                  ei_decode_atom(x.buff, &index, atom);
+
           //cb.Call(env.Global, { Napi::String::New(env, ERL_ATOM_PTR(emsg->msg))});
-          return Napi::String::New(env, ERL_ATOM_PTR(emsg.msg));
+          return Napi::String::New(env, atom);
         }
       //std::cout << str;
       //std::cout << emsg;
@@ -131,6 +158,7 @@ Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
     }
   }
 }
+
 
 Napi::Value ErlNode::GetValue(const Napi::CallbackInfo& info) {
   double num = this->value_;

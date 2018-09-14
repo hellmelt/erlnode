@@ -3,6 +3,14 @@
 
 #include <napi.h>
 
+#ifndef _REENTRANT
+#define _REENTRANT /* For some reason __erl_errno is undefined unless _REENTRANT is defined */
+#endif
+
+#include "ei.h"
+#include "erl_interface.h"
+
+
 class ErlNode : public Napi::ObjectWrap<ErlNode> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
@@ -23,6 +31,9 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
   int fd;
 
   Napi::Function receiveCallback;
+
+  ei_cnode cnode_;
+  int creation_ = 0;
 };
 
 #endif
