@@ -1,0 +1,9 @@
+-Get thread and callback to work
+-Clean up code, understand what you are doing
+-Clean up build warnings and messages
+-Implment send
+-act as a server
+-implement decoding in erlang.js
+-Implement rpc
+-Create api, hiding binary_to_term
+-Create a node gen_server
