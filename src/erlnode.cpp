@@ -12,7 +12,8 @@ std::vector<char> toChar(Napi::Value jsString) {
   return cString;
 }
 
-Napi::Buffer<char> ErlangNodeReceive(Napi::Env env, int fd) {
+// Napi::Buffer<char> ErlangNodeReceive(Napi::Env env, int fd) {
+char* ErlangNodeReceive(Napi::Env env, int fd, int* size) {
   printf("ErlangNodeRecicve\n"); 
   int loop = 1;
   erlang_msg emsg;
@@ -30,13 +31,16 @@ Napi::Buffer<char> ErlangNodeReceive(Napi::Env env, int fd) {
           loop = 0;
         } else {
                   printf("Received: %s\nSize %d Index %d\n", x.buff, x.buffsz, x.index);
-                  printf("Version, tag, len: %d %d %d\n", x.buff[0], x.buff[1], x.buff[2]);
-                  int msg_size;
+                  printf("Buffer 24 first chars:\n");
+                  for (int i = 0; i < 24; i++) printf("%d ", x.buff[i]);
+                  printf("\nVersion, tag, len: %d %d %d\n", x.buff[0], x.buff[1], x.buff[2]);
                   printf("just before skip_term\n");
-                  ei_skip_term(&x.buff[1], &msg_size);
-                  printf("Msg size: %d\n", msg_size);
-                   //return x.buff;
-                  return Napi::Buffer<char>::Copy(env, x.buff, msg_size + 1);
+                  if (ei_skip_term(x.buff, size) < 0) {
+                    printf("ei_skip_term failed, erl_errno: %d\n", erl_errno);
+                  }
+                  printf("Msg size: %d\n", *size);
+                  return x.buff;
+                  // return Napi::Buffer<char>::Copy(env, x.buff, msg_size);
        
       loop = 0;
     }
@@ -180,13 +184,14 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
 // }
 
 Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
-  return ErlangNodeReceive(info.Env(), fd);
-  // char * pBuf = ErlangNodeReceive(fd);
+  // return ErlangNodeReceive(info.Env(), fd);
+  int size;
+  char * pBuf = ErlangNodeReceive(info.Env(), fd, &size);
   //                 int msg_size;
   //                 printf("Magic, tag, len: %d, %d, %d\n", pBuf[0], pBuf[1], pBuf[2]);
   //                 ei_skip_term(&(pBuf[1]), &msg_size);
   //                 printf("Msg size: %d\n", msg_size);
-  //                 return Napi::Buffer<char>::Copy(info.Env(), pBuf, msg_size + 1);
+  return Napi::Buffer<char>::Copy(info.Env(), pBuf, size);
 }
 // Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
 //   Napi::Env env = info.Env();
