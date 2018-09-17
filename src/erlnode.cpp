@@ -13,7 +13,7 @@ std::vector<char> toChar(Napi::Value jsString) {
 }
 
 // Napi::Buffer<char> ErlangNodeReceive(Napi::Env env, int fd) {
-char* ErlangNodeReceive(Napi::Env env, int fd, int* size) {
+char* ErlangNodeReceive(int fd, int* size) {
   printf("ErlangNodeRecicve\n"); 
   int loop = 1;
   erlang_msg emsg;
@@ -54,20 +54,21 @@ public:
    ~ReceiveWorker() {}
 
    void Execute() {
-    // Napi::HandleScope scope(Env());
     printf("File desc: %d\n", fd);
-    //ErlangNodeReceive(fd);
+    pBuf = ErlangNodeReceive(fd, &size);
     printf("Async Execute complete\n");
    }
 
-   // void OnOk() {
-   //  Napi::HandleScope scope(Env());
-   //  Callback().Call({Env().Null(), MessageBuffer});
-   // }
+   void OnOk() {
+     printf("OnOK, buffer start: %d %d %d\n", pBuf[0], pBuf[1], pBuf[2]);
+     Napi::HandleScope scope(Env());
+     Callback().Call({Env().Null(),  Napi::Buffer<char>::Copy(Env(), pBuf, size)});
+   }
 
  private:
-  Napi::Buffer<char> MessageBuffer;
   int fd;
+  char* pBuf;
+  int size;
 };
 
 
@@ -78,6 +79,7 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
 
   Napi::Function func = DefineClass(env, "ErlNode", {
     InstanceMethod("receive", &ErlNode::Receive),
+    InstanceMethod("receiveAsync", &ErlNode::ReceiveAsync),
     InstanceMethod("plusOne", &ErlNode::PlusOne),
     InstanceMethod("value", &ErlNode::GetValue),
     InstanceMethod("multiply", &ErlNode::Multiply)
@@ -139,100 +141,36 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
   if (!config.Get("receiveCallback").IsFunction()) {
       Napi::TypeError::New(env, "receiveCallback property function expected").ThrowAsJavaScriptException();
   }
-  receiveCallback = config.Get("receiveCallback").As<Napi::Function>();
+  Napi::Function receiveCallback = config.Get("receiveCallback").As<Napi::Function>();
       printf("Will start receive loop thread\n");
 
-  // ReceiveWorker* wk = new ReceiveWorker(receiveCallback, fd);
-  //wk->Queue();
+  ReceiveWorker* wk = new ReceiveWorker(receiveCallback, fd);
+  wk->Queue();
   // std::thread receiveLoop(&ErlNode::ReceiveLoop, *this, env);
   // receiveCallback.Call(1, ErlangNodeReceive(env, fd));
   }
 }
 
-// void ErlNode::ReceiveLoop(Napi::Env env) {
-//   printf("Receive loop started\n");
-//   int loop = 1;
-//   unsigned char buf[256];
-//   erlang_msg emsg;
-//   int got;
-//   ei_x_buff x;
-//   ei_x_new(&x);
-//   printf("Entering loop, fd: %d\n", fd);
-//   while (loop) {
-//     got = ei_receive_msg(fd, &emsg, &x);
-//     // got  = erl_receive_msg(fd, buf, 256, &emsg);
-//     printf("Got %i\n", got);
-//        if (got == ERL_TICK) {
-//           /* ignore */
-//         } else if (got == ERL_ERROR) {
-//           loop = 0;
-//         } else {
-//         //printf("%s", buf);
-//         if (ERL_IS_ATOM(x.buff)) {
-//           //cb.Call(env.Global, { Napi::String::New(env, ERL_ATOM_PTR(emsg->msg))});
-//           printf("Atom received: %s\n", x.buff);
-//           char atom[256];
-//           int index = 0;
-//           ei_decode_atom(x.buff, &index, atom);
-//           receiveCallback.MakeCallback(env.Global(), { Napi::String::New(env, atom) });
-//         }
-//       //std::cout << str;
-//       //std::cout << emsg;
-//       //loop = 0;
-//     }
-//   }
-// }
-
 Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
   // return ErlangNodeReceive(info.Env(), fd);
   int size;
-  char * pBuf = ErlangNodeReceive(info.Env(), fd, &size);
+  char * pBuf = ErlangNodeReceive(fd, &size);
   //                 int msg_size;
   //                 printf("Magic, tag, len: %d, %d, %d\n", pBuf[0], pBuf[1], pBuf[2]);
   //                 ei_skip_term(&(pBuf[1]), &msg_size);
   //                 printf("Msg size: %d\n", msg_size);
   return Napi::Buffer<char>::Copy(info.Env(), pBuf, size);
 }
-// Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
-//   Napi::Env env = info.Env();
-//   // Napi::Function cb = info[0].As<Napi::Function>();
-//   int loop = 1;
-//   unsigned char buf[256];
-//   erlang_msg emsg;
-//   int got;
-//   ei_x_buff x;
-//   ei_x_new(&x);
-//    printf("Printf works\n");
-//   while (loop) {
-//     got = ei_receive_msg(fd, &emsg, &x);
-// //    got  = erl_receive_msg(fd, buf, 256, &emsg);
-//     printf("Got %d\n", got);
-//        if (got == ERL_TICK) {
-//         // ignore
-//         } else if (got == ERL_ERROR) {
-//           loop = 0;
-//         } else {
-//         printf("Received: %s\n", x.buff);
-//         if (true) {
-//                   printf("Received: %s\nSize %d Index %d\n", x.buff, x.buffsz, x.index);
-//                   char atom[256];
-//                   int index = 0;
-//                   ei_decode_atom(x.buff, &index, atom);
-//                   int msg_size;
-//                   ei_skip_term(&x.buff[1], &msg_size);
-//                   printf("Msg size: %d\n", msg_size);
-//           //cb.Call(env.Global, { Napi::String::New(env, ERL_ATOM_PTR(emsg->msg))});
-//           //return Napi::String::New(env, atom);
-//                   //return Napi::Buffer::Copy(env, x.buff, x.buffsz);
-//                   return Napi::Buffer<char>::Copy(env, x.buff, msg_size + 1);
-//         }
-//       //std::cout << str;
-//       //std::cout << emsg;
-//       loop = 0;
-//     }
-//   }
-// }
 
+Napi::Value ErlNode::ReceiveAsync(const Napi::CallbackInfo& info) {
+  if (info.Length() < 1 && !info[0].IsFunction()) {
+    Napi::Error::New(info.Env(), "Function expected").ThrowAsJavaScriptException();
+  }
+  Napi::Function receiveCallback = info[0].As<Napi::Function>();
+  ReceiveWorker* wk = new ReceiveWorker(receiveCallback, fd);
+  wk->Queue();
+  return info.Env().Undefined();
+}
 
 Napi::Value ErlNode::GetValue(const Napi::CallbackInfo& info) {
   double num = this->value_;

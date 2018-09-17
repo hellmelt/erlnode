@@ -10,10 +10,12 @@ console.log(erlInterface.hej());
 //console.log(erlInterface.erlConnect('anders@dhcp-184-203'));
 try {
  // let obj = new erlInterface.ErlNode({cookie: 'Oreo', connect: 'anders@Hjelms-MacBook'});//,
-  const obj = new erlInterface.ErlNode({cookie: 'Oreo', connect: 'anders@dhcp-184-203'});//,
-	//receiveCallback: (message) => console.log(message)});
+  const obj = new erlInterface.ErlNode({cookie: 'Oreo', connect: 'anders@dhcp-184-203'});
+  // const obj = new erlInterface.ErlNode({cookie: 'Oreo', connect: 'anders@dhcp-184-203' ,receiveCallback: (message) =>
+	// {console.log(erlang.binary_to_term(message))}});
+	// obj.receiveAsync((buf) => {console.log("Async: ", buf); console.log(erlang.binary_to_term(buf))});
 	const buf = obj.receive();
-	console.log(buf);
+	//console.log(buf);
   console.log(erlang.binary_to_term(buf));
 } catch(error) {
 	console.log('Error: ', error);

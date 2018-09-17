@@ -21,6 +21,7 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
   static Napi::FunctionReference constructor;
 
   Napi::Value Receive(const Napi::CallbackInfo& info);
+  Napi::Value ReceiveAsync(const Napi::CallbackInfo& info);
   Napi::Value GetValue(const Napi::CallbackInfo& info);
   Napi::Value PlusOne(const Napi::CallbackInfo& info);
   Napi::Value Multiply(const Napi::CallbackInfo& info);
