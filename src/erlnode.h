@@ -15,26 +15,15 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
   ErlNode(const Napi::CallbackInfo& info);
-  void ReceiveLoop(Napi::Env env);
+
+  static int creation_;
 
  private:
   static Napi::FunctionReference constructor;
-
-  Napi::Value Receive(const Napi::CallbackInfo& info);
-  Napi::Value ReceiveAsync(const Napi::CallbackInfo& info);
-  Napi::Value GetValue(const Napi::CallbackInfo& info);
-  Napi::Value PlusOne(const Napi::CallbackInfo& info);
-  Napi::Value Multiply(const Napi::CallbackInfo& info);
-
-
-  double value_;
-
-  int fd;
-
-  Napi::Function receiveCallback;
+  void SetUpConnection(Napi::Env, std::vector<char> remoteNode, Napi::Function callback);
+  Napi::Value Connect(const Napi::CallbackInfo& info);
 
   ei_cnode cnode_;
-  int creation_ = 0;
 };
 
 #endif

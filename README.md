@@ -12,8 +12,8 @@ Probably works on newer versions. Does often not work on older versions. I just 
 
 * macOS High Sierra (10.13.6) 
 * node v8.12.0
-* yarn 1.9.4 or npm
-* erlang 21.0.8
+* yarn 1.7.0 or npm
+* erlang 20.2.2
 * clone https://github.com/hellmelt/erlang.js.git to a directory next door
 
 ##How to build and run
@@ -26,8 +26,9 @@ code:root_dir().
 ```
 erl -sname nodeName -setcookie cookieString
 ```
-* node start (edit name of erlang node to connect to)
-* Go to erlang node, send a message
+* edit name of erlang node to connect to, mind the host part (only short names only, currently)
+* node start
+* Go to erlang node, send a message (only atoms, presently)
 ```
 {any, nodeName@host} ! myAtom.
 ```

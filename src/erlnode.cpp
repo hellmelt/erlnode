@@ -66,6 +66,7 @@ public:
   int size;
 };
 
+int ErlNode::creation_ = 0;
 
 Napi::FunctionReference ErlNode::constructor;
 
@@ -73,14 +74,16 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
 
   Napi::Function func = DefineClass(env, "ErlNode", {
-    InstanceMethod("receive", &ErlNode::Receive),
-    InstanceMethod("receiveAsync", &ErlNode::ReceiveAsync)
+    InstanceMethod("connect", &ErlNode::Connect)
   });
 
   constructor = Napi::Persistent(func);
   constructor.SuppressDestruct();
 
   exports.Set("ErlNode", func);
+
+  erl_init(NULL, 0);
+
   return exports;
 }
 
@@ -100,8 +103,13 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
   }
   std::vector<char> cookie = toChar(config.Get("cookie"));
 
+  if (!config.Has("thisNodeName") || !config.Get("thisNodeName").IsString()) {
+    Napi::TypeError::New(env, "thisNodeName string property expected").ThrowAsJavaScriptException();
+  }
+  std::vector<char> thisNodeName = toChar(config.Get("thisNodeName"));
+
   // connect_init
-  int res = ei_connect_init(&cnode_, "jsnode", &cookie[0], creation_++);
+  int res = ei_connect_init(&cnode_, &thisNodeName[0], &cookie[0], creation_++);
   if (res < 0) {
     Napi::Error::New(env, "Connect init failed").ThrowAsJavaScriptException();
   }
@@ -112,8 +120,39 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
       Napi::TypeError::New(env, "connect property string expected").ThrowAsJavaScriptException();
     }
     std::vector<char> connect = toChar(config.Get("connect"));
-    printf("Will connect to %s\n", &connect[0]);
-    if ((fd = ei_connect(&cnode_, &connect[0])) < 0) {
+
+    if (!config.Has("receiveCallback") || !config.Get("receiveCallback").IsFunction()) {
+      Napi::TypeError::New(env, "receiveCallback property function expected").ThrowAsJavaScriptException();
+    }
+    Napi::Function receiveCallback = config.Get("receiveCallback").As<Napi::Function>();
+
+    ErlNode::SetUpConnection(env, connect, receiveCallback);
+  }
+}
+
+Napi::Value ErlNode::Connect(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsString()) {
+    Napi::TypeError::New(env, "Remote node name (string) expected").ThrowAsJavaScriptException();
+  }
+  std::vector<char> connect = toChar(info[0]);
+
+  Napi::Function callback;
+
+  if (info.Length() < 2 || !info[1].IsFunction()) {
+    Napi::TypeError::New(env, "Receive callback function expected").ThrowAsJavaScriptException();
+  }
+  callback = info[1].As<Napi::Function>();
+
+  ErlNode::SetUpConnection(env, connect, callback);
+
+  return env.Undefined();
+}
+
+void ErlNode::SetUpConnection(Napi::Env env, std::vector<char> remoteNode, Napi::Function callback) {
+  int fd;
+   printf("Will connect to %s\n", &remoteNode[0]);
+    if ((fd = ei_connect(&cnode_, &remoteNode[0])) < 0) {
       if (erl_errno == EHOSTUNREACH) {
          Napi::Error::New(env, "The remote node is unreachable").ThrowAsJavaScriptException();
          }
@@ -125,32 +164,24 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
        }
        Napi::Error::New(env, "Connect failed").ThrowAsJavaScriptException();
      }
-  }
+      printf("Will start receive thread. fd=%d\n", fd);
 
-  if (config.Has("receiveCallback")) {
-  if (!config.Get("receiveCallback").IsFunction()) {
-      Napi::TypeError::New(env, "receiveCallback property function expected").ThrowAsJavaScriptException();
-  }
-  Napi::Function receiveCallback = config.Get("receiveCallback").As<Napi::Function>();
-      printf("Will start receive loop thread\n");
-
-  ReceiveWorker* wk = new ReceiveWorker(receiveCallback, fd);
+  ReceiveWorker* wk = new ReceiveWorker(callback, fd);
   wk->Queue();
-  }
 }
 
-Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
-  int size;
-  char * pBuf = ErlangNodeReceive(fd, &size);
-  return Napi::Buffer<char>::Copy(info.Env(), pBuf, size);
-}
-
-Napi::Value ErlNode::ReceiveAsync(const Napi::CallbackInfo& info) {
-  if (info.Length() < 1 && !info[0].IsFunction()) {
-    Napi::Error::New(info.Env(), "Function expected").ThrowAsJavaScriptException();
-  }
-  Napi::Function receiveCallback = info[0].As<Napi::Function>();
-  ReceiveWorker* wk = new ReceiveWorker(receiveCallback, fd);
-  wk->Queue();
-  return info.Env().Undefined();
-}
+//Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
+//  int size;
+//  char * pBuf = ErlangNodeReceive(fd, &size);
+//  return Napi::Buffer<char>::Copy(info.Env(), pBuf, size);
+//}
+//
+//Napi::Value ErlNode::ReceiveAsync(const Napi::CallbackInfo& info) {
+//  if (info.Length() < 1 || !info[0].IsFunction()) {
+//    Napi::Error::New(info.Env(), "Function expected").ThrowAsJavaScriptException();
+//  }
+//  Napi::Function receiveCallback = info[0].As<Napi::Function>();
+//  ReceiveWorker* wk = new ReceiveWorker(receiveCallback, fd);
+//  wk->Queue();
+//  return info.Env().Undefined();
+//}
