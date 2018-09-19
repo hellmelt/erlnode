@@ -102,8 +102,7 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
 
   Napi::Function func = DefineClass(env, "ErlNode", {
     InstanceMethod("connect", &ErlNode::Connect),
-    InstanceMethod("receive", &ErlNode::Receive),
-    InstanceMethod("send", &ErlNode::Send)
+    InstanceMethod("regSend", &ErlNode::RegSend)
   });
 
   constructor = Napi::Persistent(func);
@@ -156,8 +155,33 @@ Napi::Value ErlNode::Connect(const Napi::CallbackInfo& info) {
   return Napi::Number::New(env, connectionId);
 }
 
+Napi::Value ErlNode::RegSend(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() < 1 || !info[0].IsNumber()) {
+    Napi::TypeError::New(env, "Connection id (integer) expected").ThrowAsJavaScriptException();
+  }
+  int fd = info[0].As<Napi::Number>().Int32Value();
+
+  if (info.Length() < 2 || !info[1].IsString()) {
+    Napi::TypeError::New(env, "Registered name (string) expected").ThrowAsJavaScriptException();
+  }
+  std::vector<char> regName = toChar(info[1]);
+ 
+  if (info.Length() < 3 || !info[2].IsBuffer()) {
+    Napi::TypeError::New(env, "Buffer expected").ThrowAsJavaScriptException();
+  }
+  Napi::Buffer<char> buffer = info[2].As<Napi::Buffer<char>>();
+
+  if (!ei_reg_send(&cnode_, fd, &regName[0], buffer.Data(), buffer.Length())) {
+    Napi::Error::New(env, "reg send failed").ThrowAsJavaScriptException();
+  }
+
+  return env.Undefined();
+}
+
 /* Receive (async) a message on a connection. Input is connectionId and callback function */
-Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
+Napi::Value Receive(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsNumber()) {
          Napi::TypeError::New(env, "Connection id (integer) expected").ThrowAsJavaScriptException();
@@ -176,7 +200,7 @@ Napi::Value ErlNode::Receive(const Napi::CallbackInfo& info) {
 }
 
 /* Send a message on a connection. Input is connectionId and message (an encoded term) */
-Napi::Value ErlNode::Send(const Napi::CallbackInfo& info) {
+Napi::Value Send(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsNumber()) {
          Napi::TypeError::New(env, "Connection id (integer) expected").ThrowAsJavaScriptException();
@@ -221,7 +245,9 @@ Napi::Value ErlNode::Send(const Napi::CallbackInfo& info) {
   }
   Napi::Buffer<char> buffer = info[2].As<Napi::Buffer<char>>();
 
-  if (!ei_send(fd, &epid, buffer.Data(), buffer.Length()));
+  if (!ei_send(fd, &epid, buffer.Data(), buffer.Length())) {
+    Napi::Error::New(env, "send failed").ThrowAsJavaScriptException();
+  }
 
   return env.Undefined();
 }

@@ -1,4 +1,4 @@
-const erlInterface= require('./build/release/erlnode.node');
+const erlInterface = require('./build/release/erlnode.node');
 const erlang = require('../erlang.js');
 
 const hostname = require('os').hostname;
@@ -16,12 +16,12 @@ try {
   });
 
   const cA = obj.connect('anders@' + hostname().split('.')[0]);
-	obj.receive(cA, (from, to, buffer) => {
+	erlInterface.receive(cA, (from, to, buffer) => {
 	  console.log("anders connection: ", from, to, erlang.binary_to_term(buffer));
 	  setTimeout(() => {
 	    console.log("Sending message to anders");
-	    obj.send(cA, from, erlang.term_to_binary({a: 'kalle'}));
-    }, 10000);
+	    erlInterface.send(cA, from, erlang.term_to_binary({a: 'kalle'}));
+    }, 20000);
 	});
 
   // const cE = obj.connect('erik@' + hostname().split('.')[0]);

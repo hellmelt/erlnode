@@ -1,9 +1,9 @@
 XGet thread and callback to work
--Receive should contain info from erlang_msg
+XReceive should contain info from erlang_msg
 -Clean up code, understand what you are doing
 -Clean up build warnings and messages
 -Clean up all allocated memory
--Implement send
+XImplement send
 -act as a server
 -long host names
 -ei_x functions rather than just ei_

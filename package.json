@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "gypfile": true,
+  "main": "./api.js",
   "dependencies": {
     "node-addon-api": "1.4.x"
   }
