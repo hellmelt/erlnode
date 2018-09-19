@@ -23,6 +23,7 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
   int SetUpConnection(Napi::Env, std::vector<char> remoteNode);
   Napi::Value Connect(const Napi::CallbackInfo& info);
   Napi::Value Receive(const Napi::CallbackInfo& info);
+  Napi::Value Send(const Napi::CallbackInfo& info);
 
   ei_cnode cnode_;
 };
