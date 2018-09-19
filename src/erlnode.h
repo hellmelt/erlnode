@@ -20,8 +20,9 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
 
  private:
   static Napi::FunctionReference constructor;
-  void SetUpConnection(Napi::Env, std::vector<char> remoteNode, Napi::Function callback);
+  int SetUpConnection(Napi::Env, std::vector<char> remoteNode);
   Napi::Value Connect(const Napi::CallbackInfo& info);
+  Napi::Value Receive(const Napi::CallbackInfo& info);
 
   ei_cnode cnode_;
 };
