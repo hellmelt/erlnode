@@ -4,7 +4,11 @@
   "private": true,
   "gypfile": true,
   "main": "./api.js",
+  "scripts": {
+    "test": "tap test/*.js"
+  },
   "dependencies": {
-    "node-addon-api": "1.4.x"
+    "node-addon-api": "1.4.x",
+    "tap": "^12.0.1"
   }
 }

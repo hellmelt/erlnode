@@ -201,6 +201,7 @@ Napi::Value Receive(const Napi::CallbackInfo& info) {
 
 /* Send a message on a connection. Input is connectionId and message (an encoded term) */
 Napi::Value Send(const Napi::CallbackInfo& info) {
+  printf("Send\n");
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsNumber()) {
          Napi::TypeError::New(env, "Connection id (integer) expected").ThrowAsJavaScriptException();
@@ -220,21 +221,25 @@ Napi::Value Send(const Napi::CallbackInfo& info) {
   }
   std::vector<char> node = toChar(pid.Get("node"));
   strncpy(epid.node, &node[0], node.size() < MAXATOMLEN ? node.size() : MAXATOMLEN);
+  printf("Epid node %s\n", &epid.node[0]);
 
   if (!pid.Has("num") || !pid.Get("num").IsNumber()) {
     Napi::TypeError::New(env, "num number property expected in pid object").ThrowAsJavaScriptException();
   }
   int num = pid.Get("num").As<Napi::Number>().Int32Value();
+  printf("epid num %d\n", num);
 
   if (!pid.Has("serial") || !pid.Get("serial").IsNumber()) {
     Napi::TypeError::New(env, "serial number property expected in pid object").ThrowAsJavaScriptException();
   }
   int serial = pid.Get("serial").As<Napi::Number>().Int32Value();
+  printf("epid serial %d\n", serial);
 
   if (!pid.Has("creation") || !pid.Get("creation").IsNumber()) {
     Napi::TypeError::New(env, "creation number property expected in pid object").ThrowAsJavaScriptException();
   }
   int creation = pid.Get("creation").As<Napi::Number>().Int32Value();
+  printf("epid creation %d\n", creation);
 
   epid.num = num;
   epid.serial = serial;
@@ -243,9 +248,17 @@ Napi::Value Send(const Napi::CallbackInfo& info) {
   if (info.Length() < 3 || !info[2].IsBuffer()) {
     Napi::TypeError::New(env, "Buffer expected").ThrowAsJavaScriptException();
   }
+  printf("If you see this and nothing more you have problem with your buffer.\n");
+
   Napi::Buffer<char> buffer = info[2].As<Napi::Buffer<char>>();
 
-  if (!ei_send(fd, &epid, buffer.Data(), buffer.Length())) {
+  printf("Buffer 24 first chars:\n");
+  for (int i = 0; i < 24; i++) printf("%d ", buffer.Data()[i]);
+
+  printf("time to send. fd %d epid node num serial creation %s %d %d %d\n", fd, &epid.node[0], epid.num, epid.serial, epid.creation);
+  printf("Buffer length: %d\n", buffer.Length());
+  printf("Buffer: %s\n", buffer.Data());
+  if (ei_send(fd, &epid, buffer.Data(), buffer.Length()) != 0) {
     Napi::Error::New(env, "send failed").ThrowAsJavaScriptException();
   }
 

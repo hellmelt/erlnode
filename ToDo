@@ -9,5 +9,6 @@ XImplement send
 -ei_x functions rather than just ei_
 -implement decoding in erlang.js
 -Implement rpc
--Create api, hiding binary_to_term
+XCreate api, hiding binary_to_term
 -Create a node gen_server
+-automated tests

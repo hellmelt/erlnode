@@ -26,6 +26,7 @@ class cNode {
 		return promise;
 	}
 	send (connection, to, term) {
+		console.log(term_to_binary(term));
 		erlNode.send(connection, to, term_to_binary(term));
 	}
 	regSend (connection, to, term) {
