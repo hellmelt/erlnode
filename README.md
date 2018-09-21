@@ -7,7 +7,7 @@ erlang.js is used for conversions from a javascript format, representing erlang 
 But erlang.js has not implemented binary_to_term, so a fork of that repo is part of this project. Only translation
 of small atom implemented presently.
 
-##Prerequisites
+## Prerequisites
 Probably works on newer versions. Does often not work on older versions. I just document my setup.
 
 * macOS High Sierra (10.13.6) 
@@ -16,7 +16,7 @@ Probably works on newer versions. Does often not work on older versions. I just 
 * erlang 20.2.2
 * clone https://github.com/hellmelt/erlang.js.git to a directory next door
 
-##How to build and run
+## How to build and run
 * Set environment ERL_TOP to the root of the erlang installation. You can find it by starting an erlang shell and type
 ```
 code:root_dir().
@@ -26,9 +26,25 @@ code:root_dir().
 ```
 erl -sname nodeName -setcookie cookieString
 ```
-* edit name of erlang node to connect to, mind the host part (only short names only, currently)
-* node start
-* Go to erlang node, send a message (only atoms, presently)
+* edit name of erlang node to connect to in test1.js, mind the host part (only short names only, currently)
+* node test1
+* Go to erlang node, send a message (only atoms, presently). Wait for an incoming message.
 ```
 {any, nodeName@host} ! myAtom.
+receive Any -> Any end after 10000 -> timeout end.
+```
+## Automatic tests
+### Prerequisites
+Compile the erlang module
+```
+cd test
+erlc teste.erl
+```
+### Run the tests
+```
+yarn test
+```
+or
+```
+npm run test
 ```
