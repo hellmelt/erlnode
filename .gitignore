@@ -1,3 +1,5 @@
 node_modules
 *.log
 build
+*.beam
+erl_crash.dump

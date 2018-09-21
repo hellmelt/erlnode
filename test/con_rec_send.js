@@ -6,17 +6,21 @@ const cNode = require('../api.js').cNode;
 
 tap.test('Connect Receive Send', (cT) => {
 	const cnodeName = 'testjs@' + hostname().split('.')[0];
-	const erlang = exec('erl -noshell -sname teste -setcookie Oreo -s teste send_rec ' + cnodeName, 
-		null, (res) => {console.log(res)});
-	setTimout(() => {
+	const erlang = exec('cd test; erl -noshell -sname teste -setcookie Oreo -s teste send_rec', 
+		null, (res) => {console.log('Erlang process finished: ', res),
+			cT.equal(res, null, 'Erlang node received correct atom');
+			cT.end();
+		});
+	console.log("Erlang node started");
+	setTimeout(() => {
 		const cnode = new cNode('Oreo', 'testjs');
 		const conn = cnode.connect('teste@' + hostname().split('.')[0]);
-		code.receive(conn).then((result) => {
+		cT.ok((conn > 0), 'Connection failed');
+		cnode.receive(conn).then((result) => {
 			console.log("Received: ", result);
-			cT.equal(result.term, {a: 'atomFromErl'});
+			cT.same(result.term, {a: 'atomFromErl'}, 'Received wrong data');
 		cnode.send(conn, result.from, {a: 'atomFromJS'});
 		})
-	}, 500);
-	cT.end();
+	}, 1000);
 })
 

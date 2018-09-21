@@ -1,15 +1,18 @@
 -module(teste).
 
--export([send_rec/1,
-	doSendRec/1]).
+-export([send_rec/0,
+	doSendRec/0]).
 
-send_rec([Node]) ->
-	timer:apply_after(1000, ?MODULE, doSendRec, [Node]).
+send_rec() ->
+	timer:apply_after(2000, ?MODULE, doSendRec, []).
 
-doSendRec(Node) ->
-	{any, Node} ! atomFromErl,
-	receive 
-		atomFromJS -> done 
+doSendRec() ->
+	[{any, N} ! atomFromErl || N <- nodes(hidden)],
+	RetCode = receive 
+		atomFromJS -> 0;
+		_ -> 2
+	after
+		5000 -> 3
 	end,
 
-	init:stop().
+	init:stop(RetCode).
