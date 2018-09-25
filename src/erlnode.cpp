@@ -86,6 +86,33 @@ public:
   int status;
 };
 
+class ServerWorker : public Napi::AsyncWorker {
+public:
+  ServerWorker(Napi::Function& callback, ei_cnode* ec, int sockfd) : Napi::AsyncWorker(callback), 
+    ec(ec), sockfd(sockfd) {}
+
+  ~ServerWorker() {}
+
+  void Execute() {
+    printf("accept on sockfd: %d\n", sockfd);
+    status = ei_accept(ec, sockfd, &con);
+    printf("Async accept complete\n");
+  }
+
+  void OnOK() {
+    printf("connected, ipadr: %s node: %s\n", con.ipadr, con.nodename);
+    if (status == ERL_ERROR) Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
+
+    Callback().Call(Env().Null(), { Napi::String::New(Env(), con.ipadr), Napi::String::New(Env(), con.nodename) });
+  }
+
+  private:
+    ei_cnode* ec;
+    int sockfd;
+    int status;
+    ErlConnect con;
+};
+
 /* Init of a static thing */
 int ErlNode::creation_ = 0;
 
@@ -102,6 +129,7 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
 
   Napi::Function func = DefineClass(env, "ErlNode", {
     InstanceMethod("connect", &ErlNode::Connect),
+    InstanceMethod("server", &ErlNode::Server),
     InstanceMethod("regSend", &ErlNode::RegSend)
   });
 
@@ -155,6 +183,55 @@ Napi::Value ErlNode::Connect(const Napi::CallbackInfo& info) {
   return Napi::Number::New(env, connectionId);
 }
 
+Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() < 1 || !info[0].IsNumber()) {
+    Napi::TypeError::New(env, "TCP port (integer) expected").ThrowAsJavaScriptException();
+  }
+  int port = info[0].As<Napi::Number>().Int32Value();
+
+  if (info.Length() < 2 || !info[1].IsFunction()) {
+    Napi::TypeError::New(env, "Receive callback function expected").ThrowAsJavaScriptException();
+  }
+  Napi::Function callback = info[1].As<Napi::Function>();
+
+  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd < 0) 
+    Napi::Error::New(env, "ERROR opening socket").ThrowAsJavaScriptException();
+ 
+  struct sockaddr_in serv_addr;
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+   serv_addr.sin_family = AF_INET;
+   serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+   serv_addr.sin_port = htons(port);
+   if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+     if (errno == EADDRINUSE) 
+      Napi::Error::New(env, "Error port is not available").ThrowAsJavaScriptException();
+     else
+      Napi::Error::New(env, "ERROR on binding").ThrowAsJavaScriptException();
+  }
+  
+  listen(sockfd,5);
+
+  socklen_t len = sizeof(serv_addr);
+  if (getsockname(sockfd, (struct sockaddr *)&serv_addr, &len) == -1) {
+    Napi::Error::New(env, "getsockname failed").ThrowAsJavaScriptException();
+  }
+  port = ntohs(serv_addr.sin_port);
+
+  if (ei_publish(&cnode_, port) < 0)
+    Napi::Error::New(env, "Error on publishing server").ThrowAsJavaScriptException();
+
+  printf("Published server on port %d\n", port);
+
+  ServerWorker* wk = new ServerWorker(callback, &cnode_, sockfd);
+  wk->Queue();
+
+  return env.Undefined();
+}
+
+/* Send to registered process name */
 Napi::Value ErlNode::RegSend(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
@@ -173,7 +250,7 @@ Napi::Value ErlNode::RegSend(const Napi::CallbackInfo& info) {
   }
   Napi::Buffer<char> buffer = info[2].As<Napi::Buffer<char>>();
 
-  if (!ei_reg_send(&cnode_, fd, &regName[0], buffer.Data(), buffer.Length())) {
+  if (ei_reg_send(&cnode_, fd, &regName[0], buffer.Data(), buffer.Length())) {
     Napi::Error::New(env, "reg send failed").ThrowAsJavaScriptException();
   }
 

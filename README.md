@@ -10,9 +10,11 @@ of small atom implemented presently.
 ## Prerequisites
 Probably works on newer versions. Does often not work on older versions. I just document my setup.
 
-* macOS High Sierra (10.13.6) 
+* macOS High Sierra (10.13.6)
 * node v8.12.0
 * yarn 1.7.0 or npm
+* maybe global install of node-gyp?
+* XCode command line tools, like C++ compiler and linker?
 * erlang 20.2.2
 * clone https://github.com/hellmelt/erlang.js.git to a directory next door
 

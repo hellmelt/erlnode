@@ -11,4 +11,6 @@ XImplement send
 -Implement rpc
 XCreate api, hiding binary_to_term
 -Create a node gen_server
--automated tests
+Xautomated tests
+-Use timeout versions of ei-functions
+-Use MakeCallback() instead of Call()?
