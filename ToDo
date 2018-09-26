@@ -9,6 +9,7 @@ Xact as a server
 -ei_x functions rather than just ei_
 Ximplement decoding in erlang.js
 -Implement rpc
+-Implement disconnect
 XCreate api, hiding binary_to_term
 -Create a node gen_server
 Xautomated tests
