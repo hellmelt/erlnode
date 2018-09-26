@@ -4,10 +4,10 @@ XReceive should contain info from erlang_msg
 -Clean up build warnings and messages
 -Clean up all allocated memory
 XImplement send
--act as a server
+Xact as a server
 -long host names
 -ei_x functions rather than just ei_
--implement decoding in erlang.js
+Ximplement decoding in erlang.js
 -Implement rpc
 XCreate api, hiding binary_to_term
 -Create a node gen_server

@@ -16,31 +16,18 @@ void print_pid(char* label, erlang_pid* pid) {
 int ErlangNodeReceive(int fd, erlang_msg* emsg, ei_x_buff* x, int* size) {
   int loop = 1;
   int got;
-  printf("ei_x_buff allocated\n");
   while (loop) {
     got = ei_xreceive_msg(fd, emsg, x);
-    printf("Got %d\n", got);
        if (got == ERL_TICK) {
         // ignore
         } else if (got == ERL_ERROR) {
           loop = 0;
           return 0;
         } else {
-          printf("Received: %s\nSize %d Index %d\n", x->buff, x->buffsz, x->index);
-          printf("Buffer 24 first chars:\n");
-          for (int i = 0; i < 24; i++) printf("%d ", x->buff[i]);
-            printf("\nVersion, tag, len: %d %d %d\n", x->buff[0], x->buff[1], x->buff[2]);
-          printf("just before skip_term\n");
           if (ei_skip_term(x->buff + 1, size) < 0) {
             printf("ei_skip_term failed, erl_errno: %d\n", erl_errno);
           }
-          printf("emsg: type %ld \n", emsg->msgtype);
-          print_pid("Pid from", &emsg->from);
-          print_pid("Pid to", &emsg->to);
-          printf("toname: %s\n", &emsg->toname);
-          printf("cookie: %s\n", &emsg->cookie);
           *size += 1;
-          printf("Msg size: %d\n", *size);
           loop = 0;
     }
   }
@@ -58,24 +45,44 @@ public:
    void Execute() {
     size = 0;
     ei_x_new(&x);
-    printf("File desc: %d\n", fd);
     status = ErlangNodeReceive(fd, &emsg, &x, &size);
-    printf("Async Execute complete\n");
    }
 
    void OnOK() {
-     printf("OnOK, buffer start: %d %d %d\n", x.buff[0], x.buff[1], x.buff[2]);
      Napi::HandleScope scope(Env());
+     std::string retCode = "ok";
      if (!status) {
-       Napi::Error::New(Env(), "Async receive failed").ThrowAsJavaScriptException();
+      char buffer[32];
+      if (recv(fd, buffer, sizeof(buffer), MSG_PEEK | MSG_DONTWAIT) == 0) {
+        // if recv returns zero, that means the connection has been closed.
+        retCode = "closed";
+      } else retCode = "error";
      }
-     Napi::Object FromPid = Napi::Object::New(Env());
-     FromPid.Set("node", emsg.from.node);
-     FromPid.Set("num", emsg.from.num);
-     FromPid.Set("serial", emsg.from.serial);
-     FromPid.Set("creation", emsg.from.creation);
-     Callback().Call(Env().Null(),  { FromPid, Napi::String::New(Env(), emsg.toname), Napi::Buffer<char>::Copy(Env(), x.buff, size) });
+      /*
+      printf("emsg : %d\n", emsg.msgtype);
+      print_pid("from", &emsg.from);
+      print_pid("to", &emsg.to);
+    */
+     ei_x_buff fpid;
+     int fpidsize = 0;
+     ei_x_new(&fpid);
+     if (retCode == "ok") {
+      if (ei_x_encode_version(&fpid) || ei_x_encode_pid(&fpid, &emsg.from)) {
+         Napi::Error::New(Env(), "Could not encode pid").ThrowAsJavaScriptException();
+      }
+      if (ei_skip_term(fpid.buff + 1, &fpidsize) < 0) {
+              printf("ei_skip_term for pid failed, erl_errno: %d\n", erl_errno);
+      }
+     }
+     Napi::Buffer<char> FromPid = Napi::Buffer<char>::Copy(Env(), fpid.buff, ++fpidsize);
+
+     Callback().Call(Env().Null(),  { 
+      Napi::String::New(Env(), retCode), 
+      FromPid, 
+      Napi::String::New(Env(), emsg.toname), 
+      Napi::Buffer<char>::Copy(Env(), x.buff, size) });
      ei_x_free(&x);
+     ei_x_free(&fpid);
    }
 
  private:
@@ -94,22 +101,18 @@ public:
   ~ServerWorker() {}
 
   void Execute() {
-    printf("accept on sockfd: %d\n", sockfd);
-    status = ei_accept(ec, sockfd, &con);
-    printf("Async accept complete\n");
+    fd = ei_accept(ec, sockfd, &con);
   }
 
   void OnOK() {
-    printf("connected, ipadr: %s node: %s\n", con.ipadr, con.nodename);
-    if (status == ERL_ERROR) Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
-
-    Callback().Call(Env().Null(), { Napi::String::New(Env(), con.ipadr), Napi::String::New(Env(), con.nodename) });
+    if (fd == ERL_ERROR) Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
+    Callback().Call(Env().Null(), { Napi::Number::New(Env(), fd), Napi::String::New(Env(), con.nodename) });
   }
 
   private:
     ei_cnode* ec;
     int sockfd;
-    int status;
+    int fd;
     ErlConnect con;
 };
 
@@ -278,63 +281,31 @@ Napi::Value Receive(const Napi::CallbackInfo& info) {
 
 /* Send a message on a connection. Input is connectionId and message (an encoded term) */
 Napi::Value Send(const Napi::CallbackInfo& info) {
-  printf("Send\n");
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsNumber()) {
          Napi::TypeError::New(env, "Connection id (integer) expected").ThrowAsJavaScriptException();
   }
   int fd = info[0].As<Napi::Number>().Int32Value();
 
-  if (info.Length() < 2 || !info[1].IsObject()) {
-    Napi::TypeError::New(env, "Pid object expected").ThrowAsJavaScriptException();
+  if (info.Length() < 2 || !info[1].IsBuffer()) {
+    Napi::TypeError::New(env, "Binary pid expected").ThrowAsJavaScriptException();
   }
 
-  Napi::Object pid = info[1].As<Napi::Object>();
+  Napi::Buffer<char> topid = info[1].As<Napi::Buffer<char>>();
 
   erlang_pid epid;
-
-  if (!pid.Has("node") || !pid.Get("node").IsString()) {
-    Napi::TypeError::New(env, "node string property expected in pid object").ThrowAsJavaScriptException();
+  int index = 0;
+  int version;
+  if (ei_decode_version(topid.Data(), &index, &version) || ei_decode_pid(topid.Data(), &index, &epid)) {
+    Napi::Error::New(env, "Could not decode binary pid").ThrowAsJavaScriptException();
   }
-  std::vector<char> node = toChar(pid.Get("node"));
-  strncpy(epid.node, &node[0], node.size() < MAXATOMLEN ? node.size() : MAXATOMLEN);
-  printf("Epid node %s\n", &epid.node[0]);
-
-  if (!pid.Has("num") || !pid.Get("num").IsNumber()) {
-    Napi::TypeError::New(env, "num number property expected in pid object").ThrowAsJavaScriptException();
-  }
-  int num = pid.Get("num").As<Napi::Number>().Int32Value();
-  printf("epid num %d\n", num);
-
-  if (!pid.Has("serial") || !pid.Get("serial").IsNumber()) {
-    Napi::TypeError::New(env, "serial number property expected in pid object").ThrowAsJavaScriptException();
-  }
-  int serial = pid.Get("serial").As<Napi::Number>().Int32Value();
-  printf("epid serial %d\n", serial);
-
-  if (!pid.Has("creation") || !pid.Get("creation").IsNumber()) {
-    Napi::TypeError::New(env, "creation number property expected in pid object").ThrowAsJavaScriptException();
-  }
-  int creation = pid.Get("creation").As<Napi::Number>().Int32Value();
-  printf("epid creation %d\n", creation);
-
-  epid.num = num;
-  epid.serial = serial;
-  epid.creation = creation;
 
   if (info.Length() < 3 || !info[2].IsBuffer()) {
     Napi::TypeError::New(env, "Buffer expected").ThrowAsJavaScriptException();
   }
-  printf("If you see this and nothing more you have problem with your buffer.\n");
 
   Napi::Buffer<char> buffer = info[2].As<Napi::Buffer<char>>();
 
-  printf("Buffer 24 first chars:\n");
-  for (int i = 0; i < 24; i++) printf("%d ", buffer.Data()[i]);
-
-  printf("time to send. fd %d epid node num serial creation %s %d %d %d\n", fd, &epid.node[0], epid.num, epid.serial, epid.creation);
-  printf("Buffer length: %d\n", buffer.Length());
-  printf("Buffer: %s\n", buffer.Data());
   if (ei_send(fd, &epid, buffer.Data(), buffer.Length()) != 0) {
     Napi::Error::New(env, "send failed").ThrowAsJavaScriptException();
   }
@@ -345,7 +316,6 @@ Napi::Value Send(const Napi::CallbackInfo& info) {
 /* Does the stuff for Connect */
 int ErlNode::SetUpConnection(Napi::Env env, std::vector<char> remoteNode) {
   int fd;
-   printf("Will connect to %s\n", &remoteNode[0]);
     if ((fd = ei_connect(&cnode_, &remoteNode[0])) < 0) {
       if (erl_errno == EHOSTUNREACH) {
          Napi::Error::New(env, "The remote node is unreachable").ThrowAsJavaScriptException();
