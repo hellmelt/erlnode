@@ -23,10 +23,6 @@ Probably works on newer versions. Does often not work on older versions. I just 
 code:root_dir().
 ```
 * yarn install
-* start an erlang node
-```
-erl -sname nodeName -setcookie cookieString
-```
 ## How to use
 See the code in directory test.
 
