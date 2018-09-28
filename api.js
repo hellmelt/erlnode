@@ -16,7 +16,7 @@ class cNode {
 	}
 	connect (nodeName, callback) {
 		const connection = this.node.connect(nodeName);
-		this.persistentReceiveCallback.connection = callback;
+		this.persistentReceiveCallback[connection] = callback;
 		this.receiveLoop(connection);
 		return connection;
 	}
@@ -28,16 +28,16 @@ class cNode {
 	receiveLoop (connection) {
 		erlNode.receive(connection, (status, from, to, buffer) => {
 			if (status === 'ok') {
-				if (typeof this.persistentReceiveCallback.connection === 'function') {
-					this.persistentReceiveCallback.connection(status, binary_to_term(from), to, binary_to_term(buffer));
+				if (typeof this.persistentReceiveCallback[connection] === 'function') {
+					this.persistentReceiveCallback[connection](status, binary_to_term(from), to, binary_to_term(buffer));
 				}
-				if (typeof this.receiveCallback.connection === 'function') {
-					this.receiveCallback.connection(status, binary_to_term(from), to, binary_to_term(buffer));
-					this.receiveCallback.connection = undefined;
+				if (typeof this.receiveCallback[connection] === 'function') {
+					this.receiveCallback[connection](status, binary_to_term(from), to, binary_to_term(buffer));
+					this.receiveCallback[connection] = undefined;
 				}
 				this.receiveLoop(connection);
 			} else if (status === 'closed') {
-				this.persistentReceiveCallback.connection = undefined;
+				this.persistentReceiveCallback[connection] = undefined;
 			}
 		})
 	}
@@ -54,12 +54,21 @@ class cNode {
 			})
 		})
 	}
-	receiveCb (connection, callback) {
-		this.receiveCallback.connection = callback;
+	disconnect (connection) {
+		erlNode.disconnect(connection);
+		this.persistentReceiveCallback[connection] = undefined;
+		this.receiveCallback[connection] = undefined;
+	}
+	receiveCb (connection, callback, persistent) {
+		if (persistent) {
+			this.persistentReceiveCallback[connection] = callback;
+		} else {
+			this.receiveCallback[connection] = callback;
+		}
 	}
 	receive (connection) {
 		const promise = new Promise((resolve, reject) => {
-			this.receiveCallback.connection = (status, from, to, term) => {
+			this.receiveCallback[connection] = (status, from, to, term) => {
 				resolve({ status, from, to, term });
 			}
 		});
@@ -71,7 +80,9 @@ class cNode {
 	regSend (connection, to, term) {
 		this.node.regSend(connection, to, term_to_binary(term));
 	}
-
+	self () {
+		return binary_to_term(this.node.self());
+	}
 }
 
 module.exports.cNode = cNode;

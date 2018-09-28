@@ -12,6 +12,7 @@
 
 Napi::Value Receive(const Napi::CallbackInfo& info);
 Napi::Value Send(const Napi::CallbackInfo& info);
+Napi::Value Disconnect(const Napi::CallbackInfo& info);
 
 
 class ErlNode : public Napi::ObjectWrap<ErlNode> {
@@ -27,6 +28,7 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
   Napi::Value Connect(const Napi::CallbackInfo& info);
   Napi::Value Server(const Napi::CallbackInfo& info);
   Napi::Value RegSend(const Napi::CallbackInfo& info);
+  Napi::Value Self(const Napi::CallbackInfo& info);
 
   ei_cnode cnode_;
 };

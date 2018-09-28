@@ -7,6 +7,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
               Napi::Function::New(env, Receive));
    exports.Set(Napi::String::New(env, "send"),
               Napi::Function::New(env, Send));
+   exports.Set(Napi::String::New(env, "disconnect"),
+              Napi::Function::New(env, Disconnect));
   return ErlNode::Init(env, exports);
 }
 

@@ -1,4 +1,5 @@
-#include "erlnode.h"  
+#include "erlnode.h"
+#include <unistd.h>
 
 /* Utility to get something compatible to char *, does not need explicit free */
 std::vector<char> toChar(Napi::Value jsString) {
@@ -10,6 +11,21 @@ std::vector<char> toChar(Napi::Value jsString) {
 
 void print_pid(char* label, erlang_pid* pid) {
   printf("%s: node %s, num %d, serial %d, creation %d\n", label, pid->node, pid->num, pid->serial, pid->creation);
+}
+
+Napi::Buffer<char> encodePid(erlang_pid* pid, Napi::Env env) {
+    ei_x_buff x;
+    int size = 0;
+    ei_x_new(&x);
+    if (ei_x_encode_version(&x) || ei_x_encode_pid(&x, pid)) {
+         Napi::Error::New(env, "Could not encode pid").ThrowAsJavaScriptException();
+    }
+    if (ei_skip_term(x.buff + 1, &size) < 0) {
+         printf("ei_skip_term for pid failed, erl_errno: %d\n", erl_errno);
+    }
+    Napi::Buffer<char> jspid = Napi::Buffer<char>::Copy(env, x.buff, ++size);
+    ei_x_free(&x);
+    return jspid;
 }
 
 /* Waits for receiving a message from a connection */
@@ -58,23 +74,12 @@ public:
         retCode = "closed";
       } else retCode = "error";
      }
-      /*
-      printf("emsg : %d\n", emsg.msgtype);
-      print_pid("from", &emsg.from);
-      print_pid("to", &emsg.to);
-    */
-     ei_x_buff fpid;
-     int fpidsize = 0;
-     ei_x_new(&fpid);
+     Napi::Buffer<char> FromPid;
      if (retCode == "ok") {
-      if (ei_x_encode_version(&fpid) || ei_x_encode_pid(&fpid, &emsg.from)) {
-         Napi::Error::New(Env(), "Could not encode pid").ThrowAsJavaScriptException();
-      }
-      if (ei_skip_term(fpid.buff + 1, &fpidsize) < 0) {
-              printf("ei_skip_term for pid failed, erl_errno: %d\n", erl_errno);
-      }
+      FromPid = encodePid(&emsg.from, Env());
+     } else {
+      FromPid = Napi::Buffer<char>::New(Env(), 0);
      }
-     Napi::Buffer<char> FromPid = Napi::Buffer<char>::Copy(Env(), fpid.buff, ++fpidsize);
 
      Callback().Call(Env().Null(),  { 
       Napi::String::New(Env(), retCode), 
@@ -82,7 +87,6 @@ public:
       Napi::String::New(Env(), emsg.toname), 
       Napi::Buffer<char>::Copy(Env(), x.buff, size) });
      ei_x_free(&x);
-     ei_x_free(&fpid);
    }
 
  private:
@@ -133,7 +137,8 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function func = DefineClass(env, "ErlNode", {
     InstanceMethod("connect", &ErlNode::Connect),
     InstanceMethod("server", &ErlNode::Server),
-    InstanceMethod("regSend", &ErlNode::RegSend)
+    InstanceMethod("regSend", &ErlNode::RegSend),
+    InstanceMethod("self", &ErlNode::Self)
   });
 
   constructor = Napi::Persistent(func);
@@ -260,6 +265,10 @@ Napi::Value ErlNode::RegSend(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
+Napi::Value ErlNode::Self(const Napi::CallbackInfo& info) {
+  return encodePid(ei_self(&cnode_), info.Env());
+}
+
 /* Receive (async) a message on a connection. Input is connectionId and callback function */
 Napi::Value Receive(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
@@ -309,6 +318,19 @@ Napi::Value Send(const Napi::CallbackInfo& info) {
   if (ei_send(fd, &epid, buffer.Data(), buffer.Length()) != 0) {
     Napi::Error::New(env, "send failed").ThrowAsJavaScriptException();
   }
+
+  return env.Undefined();
+}
+
+Napi::Value Disconnect(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() < 1 || !info[0].IsNumber()) {
+    Napi::TypeError::New(env, "connection expected").ThrowAsJavaScriptException();
+  }
+  int fd = info[0].As<Napi::Number>().Int32Value();
+
+  close(fd);
 
   return env.Undefined();
 }
