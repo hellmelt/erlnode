@@ -1,33 +1,13 @@
 -module(teste).
 
--export([send_rec/0,
-	doSendRec/0,
-	doSendRec/1,
-	reg_rec_send/0]).
+-export([send_rec_delay/1,
+	send_rec/1,
+	reg_rec_send/1]).
 
-send_rec() ->
-	timer:apply_after(2000, ?MODULE, doSendRec, []).
+send_rec_delay(NodeList) ->
+	timer:apply_after(1000, ?MODULE, send_rec, NodeList).
 
-doSendRec() ->
-	[{any, N} ! atomFromErl || N <- nodes(hidden)],
-	RetCode1 = receive 
-		atomFromJS -> 0;
-		_ -> 1
-	after
-		5000 -> 8
-	end,
-
-	[{any, N} ! {atomFromErl, "StringFromErl", 42} || N <- nodes(hidden)],
-	RetCode2 = receive
-		{atomFromJS, "StringFromJS", 43} -> 0;
-		_ -> 2
-	after
-		5000 -> 16
-	end,
-
-	init:stop(RetCode1 + RetCode2).
-
-doSendRec([Node]) ->
+send_rec(Node) ->
 	{any, Node} ! atomFromErl,
 	RetCode1 = receive 
 		atomFromJS -> 0;
@@ -36,7 +16,7 @@ doSendRec([Node]) ->
 		5000 -> 8
 	end,
 
-	[{any, N} ! {atomFromErl, "StringFromErl", 42} || N <- nodes(hidden)],
+	{any, Node} ! {atomFromErl, "StringFromErl", 42},
 	RetCode2 = receive
 		{atomFromJS, "StringFromJS", 43} -> 0;
 		_ -> 2
@@ -46,11 +26,11 @@ doSendRec([Node]) ->
 
 	init:stop(RetCode1 + RetCode2).
 
-reg_rec_send() ->
+reg_rec_send([Node]) ->
 	register(testprocess, self()),
 	RetCode = receive
 		atomFromJS2 ->
-			[{any, N} ! atomFromErl2 || N <- nodes(hidden)],
+			{any, Node} ! atomFromErl2,
 			0;
 		_ -> 2
 	after
