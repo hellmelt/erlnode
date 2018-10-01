@@ -2,23 +2,31 @@
 
 -export([send_rec_delay/1,
 	send_rec/1,
+	send_rec/2,
 	reg_rec_send/1]).
 
-send_rec_delay(NodeList) ->
-	timer:apply_after(1000, ?MODULE, send_rec, NodeList).
+send_rec_delay(ArgList) ->
+	timer:apply_after(1000, ?MODULE, send_rec, ArgList).
 
-send_rec(Node) ->
-	{any, Node} ! atomFromErl,
+send_rec([Node, Suffix]) ->
+	send_rec(Node, Suffix).
+
+send_rec(NodeStr, Suffix) ->
+	Node = list_to_atom(NodeStr),
+	io:format("Node: ~w Suffix: ~s", [Node, Suffix]),
+	{any, Node} ! list_to_atom("atomFromErl" ++ Suffix),
+	ExpectedAtom = list_to_atom("atomFromJS" ++ Suffix),
 	RetCode1 = receive 
-		atomFromJS -> 0;
+		ExpectedAtom -> 0;
 		_ -> 1
 	after
 		5000 -> 8
 	end,
 
-	{any, Node} ! {atomFromErl, "StringFromErl", 42},
+	{any, Node} ! {list_to_atom("atomFromErl" ++ Suffix), "StringFromErl" ++ Suffix, 42 + list_to_integer(Suffix)},
+	ExpectedTerm = {list_to_atom("atomFromJS" ++ Suffix), "StringFromJS" ++ Suffix, 142 + list_to_integer(Suffix)},
 	RetCode2 = receive
-		{atomFromJS, "StringFromJS", 43} -> 0;
+		ExpectedTerm -> 0;
 		_ -> 2
 	after
 		5000 -> 16
@@ -26,11 +34,13 @@ send_rec(Node) ->
 
 	init:stop(RetCode1 + RetCode2).
 
-reg_rec_send([Node]) ->
-	register(testprocess, self()),
+reg_rec_send([NodeStr, Suffix]) ->
+	Node = list_to_atom(NodeStr),
+	register(list_to_atom("testprocess" ++ Suffix), self()),
+	ExpectedAtom = list_to_atom("atomFromJS" ++ Suffix),
 	RetCode = receive
-		atomFromJS2 ->
-			{any, Node} ! atomFromErl2,
+		ExpectedAtom ->
+			{any, Node} ! list_to_atom("atomFromErl2" ++ Suffix),
 			0;
 		_ -> 2
 	after

@@ -15,4 +15,4 @@ XCreate api, hiding binary_to_term
 Xautomated tests
 -Use timeout versions of ei-functions
 -Use MakeCallback() instead of Call()?
--self()
+Xself()
