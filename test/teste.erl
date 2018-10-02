@@ -13,7 +13,6 @@ send_rec([Node, Suffix]) ->
 
 send_rec(NodeStr, Suffix) ->
 	Node = list_to_atom(NodeStr),
-	io:format("Node: ~w Suffix: ~s", [Node, Suffix]),
 	{any, Node} ! list_to_atom("atomFromErl" ++ Suffix),
 	ExpectedAtom = list_to_atom("atomFromJS" ++ Suffix),
 	RetCode1 = receive 

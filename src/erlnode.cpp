@@ -99,8 +99,8 @@ public:
 
 class ServerWorker : public Napi::AsyncWorker {
 public:
-  ServerWorker(Napi::Function& callback, ei_cnode* ec, int sockfd) : Napi::AsyncWorker(callback), 
-    ec(ec), sockfd(sockfd) {}
+  ServerWorker(Napi::Function& callback, ei_cnode* ec, int sockfd, int pubfd) : Napi::AsyncWorker(callback), 
+    ec(ec), sockfd(sockfd), pubfd(pubfd) {}
 
   ~ServerWorker() {}
 
@@ -109,6 +109,7 @@ public:
   }
 
   void OnOK() {
+    close(pubfd);
     if (fd == ERL_ERROR) Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
     Callback().Call(Env().Null(), { Napi::Number::New(Env(), fd), Napi::String::New(Env(), con.nodename) });
   }
@@ -116,6 +117,7 @@ public:
   private:
     ei_cnode* ec;
     int sockfd;
+    int pubfd;
     int fd;
     ErlConnect con;
 };
@@ -228,12 +230,13 @@ Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
   }
   port = ntohs(serv_addr.sin_port);
 
-  if (ei_publish(&cnode_, port) < 0)
+  int pubfd;
+  if ((pubfd = ei_publish(&cnode_, port)) < 0)
     Napi::Error::New(env, "Error on publishing server").ThrowAsJavaScriptException();
 
   printf("Published server on port %d\n", port);
 
-  ServerWorker* wk = new ServerWorker(callback, &cnode_, sockfd);
+  ServerWorker* wk = new ServerWorker(callback, &cnode_, sockfd, pubfd);
   wk->Queue();
 
   return env.Undefined();

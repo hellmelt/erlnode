@@ -42,7 +42,7 @@ class cNode {
 		})
 	}
 	serverCb (port, callback) {
-		return this.node.server(port, (connection, nodename) => {
+		this.node.server(port, (connection, nodename) => {
 			this.receiveLoop(connection);
 			callback(connection, nodename)});
 	}
@@ -53,6 +53,7 @@ class cNode {
 				resolve({ connection, nodename });
 			})
 		})
+		return promise;
 	}
 	disconnect (connection) {
 		erlNode.disconnect(connection);
