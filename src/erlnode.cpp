@@ -106,11 +106,12 @@ public:
 
   void Execute() {
     fd = ei_accept(ec, sockfd, &con);
+    errornumber = errno;
+    printf("Accepted: %d, errno: %d\n", fd, errno);
   }
 
   void OnOK() {
-    close(pubfd);
-    if (fd == ERL_ERROR) Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
+    if (fd == ERL_ERROR && errornumber != ECONNABORTED) Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
     Callback().Call(Env().Null(), { Napi::Number::New(Env(), fd), Napi::String::New(Env(), con.nodename) });
   }
 
@@ -119,11 +120,12 @@ public:
     int sockfd;
     int pubfd;
     int fd;
+    int errornumber;
     ErlConnect con;
 };
 
 /* Init of a static thing */
-int ErlNode::creation_ = 0;
+int ErlNode::creation = 0;
 
 /* Some kind of forward reference, needed when wrapping a C++ class */
 Napi::FunctionReference ErlNode::constructor;
@@ -139,8 +141,10 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
   Napi::Function func = DefineClass(env, "ErlNode", {
     InstanceMethod("connect", &ErlNode::Connect),
     InstanceMethod("server", &ErlNode::Server),
+    InstanceMethod("accept", &ErlNode::Accept),
     InstanceMethod("regSend", &ErlNode::RegSend),
-    InstanceMethod("self", &ErlNode::Self)
+    InstanceMethod("self", &ErlNode::Self),
+    InstanceMethod("unpublish", &ErlNode::Unpublish)
   });
 
   constructor = Napi::Persistent(func);
@@ -156,9 +160,10 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
   Napi::Env env = info.Env();
   Napi::HandleScope scope(env);
 
+  serversocket = -1;
+
   int length = info.Length();
 
-  // Remote node
   if (length <= 0 || !info[0].IsObject()) {
     Napi::TypeError::New(env, "Object expected").ThrowAsJavaScriptException();
   }
@@ -174,7 +179,7 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
   std::vector<char> thisNodeName = toChar(config.Get("thisNodeName"));
 
   // connect_init
-  int res = ei_connect_init(&cnode_, &thisNodeName[0], &cookie[0], creation_++);
+  int res = ei_connect_init(&einode, &thisNodeName[0], &cookie[0], creation++);
   if (res < 0) {
     Napi::Error::New(env, "Connect init failed").ThrowAsJavaScriptException();
   }
@@ -195,19 +200,20 @@ Napi::Value ErlNode::Connect(const Napi::CallbackInfo& info) {
 
 Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
+  int port = -1;
+
+  printf("serversocket: %d\n", serversocket);
+  if (serversocket > 0) {
+    Napi::Error::New(env, "Server already started").ThrowAsJavaScriptException();
+  } else {
 
   if (info.Length() < 1 || !info[0].IsNumber()) {
     Napi::TypeError::New(env, "TCP port (integer) expected").ThrowAsJavaScriptException();
   }
-  int port = info[0].As<Napi::Number>().Int32Value();
+  port = info[0].As<Napi::Number>().Int32Value();
 
-  if (info.Length() < 2 || !info[1].IsFunction()) {
-    Napi::TypeError::New(env, "Receive callback function expected").ThrowAsJavaScriptException();
-  }
-  Napi::Function callback = info[1].As<Napi::Function>();
-
-  int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) 
+  serversocket = socket(AF_INET, SOCK_STREAM, 0);
+  if (serversocket < 0)
     Napi::Error::New(env, "ERROR opening socket").ThrowAsJavaScriptException();
  
   struct sockaddr_in serv_addr;
@@ -215,31 +221,49 @@ Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
    serv_addr.sin_family = AF_INET;
    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
    serv_addr.sin_port = htons(port);
-   if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+   if (bind(serversocket, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
      if (errno == EADDRINUSE) 
       Napi::Error::New(env, "Error port is not available").ThrowAsJavaScriptException();
      else
       Napi::Error::New(env, "ERROR on binding").ThrowAsJavaScriptException();
   }
   
-  listen(sockfd,5);
+  listen(serversocket,5);
 
   socklen_t len = sizeof(serv_addr);
-  if (getsockname(sockfd, (struct sockaddr *)&serv_addr, &len) == -1) {
+  if (getsockname(serversocket, (struct sockaddr *)&serv_addr, &len) == -1) {
     Napi::Error::New(env, "getsockname failed").ThrowAsJavaScriptException();
   }
   port = ntohs(serv_addr.sin_port);
 
-  int pubfd;
-  if ((pubfd = ei_publish(&cnode_, port)) < 0)
+  if ((publishfd = ei_publish(&einode, port)) < 0)
     Napi::Error::New(env, "Error on publishing server").ThrowAsJavaScriptException();
 
   printf("Published server on port %d\n", port);
+  }
 
-  ServerWorker* wk = new ServerWorker(callback, &cnode_, sockfd, pubfd);
+  return Napi::Number::New(env, port);
+}
+
+Napi::Value ErlNode::Accept(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+
+  if (info.Length() < 1 || !info[0].IsFunction()) {
+    Napi::TypeError::New(env, "Receive callback function expected").ThrowAsJavaScriptException();
+  }
+  Napi::Function callback = info[0].As<Napi::Function>();
+
+  ServerWorker* wk = new ServerWorker(callback, &einode, serversocket, publishfd);
   wk->Queue();
 
   return env.Undefined();
+}
+
+Napi::Value ErlNode::Unpublish(const Napi::CallbackInfo& info) {
+  printf("Closing sockets, publish: %d serversocket: %d\n", publishfd, serversocket);
+  if (publishfd > 0) close(publishfd);
+  if (serversocket > 0) close(serversocket);
+  return info.Env().Undefined();
 }
 
 /* Send to registered process name */
@@ -261,7 +285,7 @@ Napi::Value ErlNode::RegSend(const Napi::CallbackInfo& info) {
   }
   Napi::Buffer<char> buffer = info[2].As<Napi::Buffer<char>>();
 
-  if (ei_reg_send(&cnode_, fd, &regName[0], buffer.Data(), buffer.Length())) {
+  if (ei_reg_send(&einode, fd, &regName[0], buffer.Data(), buffer.Length())) {
     Napi::Error::New(env, "reg send failed").ThrowAsJavaScriptException();
   }
 
@@ -269,7 +293,7 @@ Napi::Value ErlNode::RegSend(const Napi::CallbackInfo& info) {
 }
 
 Napi::Value ErlNode::Self(const Napi::CallbackInfo& info) {
-  return encodePid(ei_self(&cnode_), info.Env());
+  return encodePid(ei_self(&einode), info.Env());
 }
 
 /* Receive (async) a message on a connection. Input is connectionId and callback function */
@@ -341,7 +365,7 @@ Napi::Value Disconnect(const Napi::CallbackInfo& info) {
 /* Does the stuff for Connect */
 int ErlNode::SetUpConnection(Napi::Env env, std::vector<char> remoteNode) {
   int fd;
-    if ((fd = ei_connect(&cnode_, &remoteNode[0])) < 0) {
+    if ((fd = ei_connect(&einode, &remoteNode[0])) < 0) {
       if (erl_errno == EHOSTUNREACH) {
          Napi::Error::New(env, "The remote node is unreachable").ThrowAsJavaScriptException();
          }

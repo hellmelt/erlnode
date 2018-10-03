@@ -20,17 +20,21 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
   ErlNode(const Napi::CallbackInfo& info);
 
-  static int creation_;
+  static int creation;
 
  private:
   static Napi::FunctionReference constructor;
   int SetUpConnection(Napi::Env, std::vector<char> remoteNode);
   Napi::Value Connect(const Napi::CallbackInfo& info);
   Napi::Value Server(const Napi::CallbackInfo& info);
+  Napi::Value Accept(const Napi::CallbackInfo& info);
   Napi::Value RegSend(const Napi::CallbackInfo& info);
   Napi::Value Self(const Napi::CallbackInfo& info);
+  Napi::Value Unpublish(const Napi::CallbackInfo& info);
 
-  ei_cnode cnode_;
+  ei_cnode einode;
+  int serversocket;
+  int publishfd;
 };
 
 #endif
