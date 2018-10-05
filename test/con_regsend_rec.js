@@ -10,8 +10,7 @@ const con_regsend_rec = async (cnode, enode, childTest, suffix) => {
   cnode.regSend(conn, 'testprocess' + suffix, {a: 'atomFromJS' + suffix});
   const { term } = await cnode.receive(conn);
   childTest.same(term, {a: 'atomFromErl2' + suffix}, 'Received correct atom');
-
-}
+};
 
 tap.test('Connect RegSend Receive to one node', (cT) => {
   cT.plan(3);
@@ -28,8 +27,8 @@ tap.test('Connect RegSend Receive to one node', (cT) => {
 
 tap.test('Connect RegSend Receive two nodes one cnode', (cT) => {
   cT.plan(6);
-  const cnodename = 'testjs@' + hostname().toLowerCase().split('.')[0];
-  const cnode = new cNode('Oreo', 'testjs');
+  const cnodename = 'testjs0@' + hostname().toLowerCase().split('.')[0];
+  const cnode = new cNode('Oreo', 'testjs0');
   const suffix_1 = '5';
   erl_for_client('teste5', 'Oreo', 'teste', 'reg_rec_send', cnodename + ' ' + suffix_1,
     () => con_regsend_rec(cnode, 'teste5', cT, suffix_1),

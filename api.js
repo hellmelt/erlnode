@@ -47,7 +47,10 @@ class cNode {
   }
   acceptLoop () {
     this.node.accept((connection, nodename) => {
-      if (connection > 0) {
+    	// Timeout
+			if (connection === -5) {  // ETIMEDOUT
+				this.acceptLoop();
+			} else if (connection > 0) {
         if (typeof this.acceptCallback === 'function') {
           this.acceptCallback(connection, nodename);
         }

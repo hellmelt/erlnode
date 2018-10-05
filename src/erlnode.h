@@ -19,6 +19,7 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
   ErlNode(const Napi::CallbackInfo& info);
+  ~ErlNode();
 
   static int creation;
 
@@ -35,6 +36,8 @@ class ErlNode : public Napi::ObjectWrap<ErlNode> {
   ei_cnode einode;
   int serversocket;
   int publishfd;
+  bool stopServer;
+  Napi::AsyncWorker* swk;
 };
 
 #endif

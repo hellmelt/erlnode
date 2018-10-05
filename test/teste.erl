@@ -6,7 +6,7 @@
 	reg_rec_send/1]).
 
 send_rec_delay(ArgList) ->
-	timer:apply_after(1000, ?MODULE, send_rec, ArgList).
+	timer:apply_after(500, ?MODULE, send_rec, ArgList).
 
 send_rec([Node, Suffix]) ->
 	send_rec(Node, Suffix).

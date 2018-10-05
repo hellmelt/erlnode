@@ -17,11 +17,11 @@ const con_rec_send = async (cnode, enode, childTest, suffix) => {
 
 tap.test('Connect Receive Send to one node one cnode', (cT) => {
   cT.plan(4);
-  const cnodename = 'testjs@' + hostname().toLowerCase().split('.')[0];
+  const cnodename = 'test@' + hostname().toLowerCase().split('.')[0];
   const suffix = '0';
-  const cnode = new cNode('Oreo', 'testjs');
+  const cnode = new cNode('Oreo', 'test');
   erl_for_client('teste', 'Oreo', 'teste', 'send_rec_delay', cnodename + ' ' + suffix,
-    () => con_rec_send(cnode, 'teste', cT, 0),
+    () => con_rec_send(cnode, 'teste', cT, suffix),
     (res) => {
       cnode.unpublish();
       cT.equal(res, null, 'Erlang node received correct terms');
@@ -47,13 +47,12 @@ tap.test('Connect Receive Send to two nodes one cnode', (cT) => {
       cnode.unpublish();
       cT.equal(res, null, 'Erlang node received correct terms');
     });
-
 });
 
 tap.test('Connect Receive Send to two nodes two cnodes', (cT) => {
   cT.plan(8);
-  const cnode_1 = new cNode('Oreo', 'testjs_1');
-  const cnodename_1 = 'testjs_1@' + hostname().toLowerCase().split('.')[0];
+  const cnode_1 = new cNode('Oreo', 'testjs1');
+  const cnodename_1 = 'testjs1@' + hostname().toLowerCase().split('.')[0];
   const suffix_1 = '1';
   erl_for_client('test1', 'Oreo', 'teste', 'send_rec_delay', cnodename_1 + ' ' + suffix_1,
     () => con_rec_send(cnode_1, 'test1', cT, suffix_1),
@@ -62,8 +61,9 @@ tap.test('Connect Receive Send to two nodes two cnodes', (cT) => {
       cT.equal(res, null, 'Erlang node received correct terms');
     });
 
-  const cnode_2 = new cNode('Oreo', 'testjs_2');
-  const cnodename_2 = 'testjs_2@' + hostname().toLowerCase().split('.')[0];
+  const cnode_2 = new cNode('Oreo', 'testjs2');
+  // console.log('Self: ', cnode_2.self());
+  const cnodename_2 = 'testjs2@' + hostname().toLowerCase().split('.')[0];
   const suffix_2 = 2;
   erl_for_client('test2', 'Oreo', 'teste', 'send_rec_delay', cnodename_2 + ' ' + suffix_2,
     () => con_rec_send(cnode_2, 'test2', cT, suffix_2),
@@ -71,5 +71,4 @@ tap.test('Connect Receive Send to two nodes two cnodes', (cT) => {
       cnode_2.unpublish();
       cT.equal(res, null, 'Erlang node received correct terms');
     });
-
 });

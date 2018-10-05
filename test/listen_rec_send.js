@@ -32,12 +32,11 @@ tap.test('Connect Receive Send one server one cnode', (cT) => {
     });
 });
 
-let cnode;
 tap.test('Connect Receive Send one server one cnode two incoming connections', (cT) => {
   cT.plan(8);
   const suffix_1 = '0';
   const suffix_2 = '5';
-  cnode = new cNode('Oreo', 'testjs', 0, async (conn, nodename) => {
+  const cnode = new cNode('Oreo', 'testjs0', 0, async (conn, nodename) => {
     if (nodename.match('teste1')) {
       console.log('Connected 1: ', conn, nodename);
     	cT.ok((conn > 0), 'Connection established');
@@ -48,7 +47,7 @@ tap.test('Connect Receive Send one server one cnode two incoming connections', (
       server_rec_send(cnode, conn, cT, suffix_2);
 		}
   });
-  let cnodename = 'testjs@' + hostname().toLowerCase().split('.')[0];
+  let cnodename = 'testjs0@' + hostname().toLowerCase().split('.')[0];
   erl_for_server('teste1', 'Oreo', 'teste', 'send_rec', cnodename + ' ' + suffix_1,
     (result) => {
       cT.equal(result, null, 'Erlang node received correct terms');
@@ -56,16 +55,16 @@ tap.test('Connect Receive Send one server one cnode two incoming connections', (
 
   erl_for_server('teste2', 'Oreo', 'teste', 'send_rec', cnodename + ' ' + suffix_2,
     (result) => {
+  		cnode.unpublish();
       cT.equal(result, null, 'Erlang node received correct terms');
     });
-}).then(() => cnode.unpublish());
+});
 
-let cnode1, cnode2;
 tap.test('Connect Receive Send two servers (two cnodes) two incoming connections', (cT) => {
   cT.plan(8);
   const suffix_1 = '0';
   const suffix_2 = '5';
-  cnode1 = new cNode('Oreo', 'testjs1', 0, async (conn, nodename) => {
+  const cnode1 = new cNode('Oreo', 'testjs1', 0, async (conn, nodename) => {
     if (nodename.match('teste1')) {
       console.log('Connected 11: ', conn, nodename);
       cT.ok((conn > 0), 'Connection established');
@@ -75,10 +74,11 @@ tap.test('Connect Receive Send two servers (two cnodes) two incoming connections
   let cnodename1 = 'testjs1@' + hostname().toLowerCase().split('.')[0];
   erl_for_server('teste1', 'Oreo', 'teste', 'send_rec', cnodename1 + ' ' + suffix_1,
     (result) => {
+  		cnode1.unpublish();
       cT.equal(result, null, 'Erlang node received correct terms');
     });
 
-  cnode2 = new cNode('Oreo', 'testjs2', 0, async (conn, nodename) => {
+  const cnode2 = new cNode('Oreo', 'testjs2', 0, async (conn, nodename) => {
     if (nodename.match('teste2')) {
       console.log('Connected 22: ', conn, nodename);
       cT.ok((conn > 0), 'Connection established');
@@ -88,7 +88,7 @@ tap.test('Connect Receive Send two servers (two cnodes) two incoming connections
   let cnodename2 = 'testjs2@' + hostname().toLowerCase().split('.')[0];
   erl_for_server('teste2', 'Oreo', 'teste', 'send_rec', cnodename2 + ' ' + suffix_2,
     (result) => {
+  		cnode2.unpublish();
       cT.equal(result, null, 'Erlang node received correct terms');
     });
-}).then(() => { cnode1.unpublish(); cnode2.unpublish(); });
-
+});

@@ -65,7 +65,7 @@ public:
    }
 
    void OnOK() {
-     Napi::HandleScope scope(Env());
+     // Napi::HandleScope scope(Env());
      std::string retCode = "ok";
      if (!status) {
       char buffer[32];
@@ -105,13 +105,19 @@ public:
   ~ServerWorker() {}
 
   void Execute() {
-    fd = ei_accept(ec, sockfd, &con);
+    fd = ei_accept_tmo(ec, sockfd, &con, 100);
     errornumber = errno;
-    printf("Accepted: %d, errno: %d\n", fd, errno);
+    erlerrornumber = erl_errno;
   }
 
   void OnOK() {
-    if (fd == ERL_ERROR && errornumber != ECONNABORTED) Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
+    // Napi::HandleScope scope(Env());
+    if (fd == ERL_ERROR && errornumber != ECONNABORTED && errornumber != 0) {
+      printf("Accept failed, fd: %d, errno: %d, erl_errno: %d\n", fd, errornumber, erlerrornumber);
+      Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
+    } else if (fd == ERL_ERROR && erlerrornumber == ETIMEDOUT) {
+      fd = ERL_TIMEOUT; // -5
+    }
     Callback().Call(Env().Null(), { Napi::Number::New(Env(), fd), Napi::String::New(Env(), con.nodename) });
   }
 
@@ -121,6 +127,7 @@ public:
     int pubfd;
     int fd;
     int errornumber;
+    int erlerrornumber;
     ErlConnect con;
 };
 
@@ -136,7 +143,7 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
   // Required when process works with erl_interface, and presumably also ei
   erl_init(NULL, 0);
 
-  Napi::HandleScope scope(env);
+  // Napi::HandleScope scope(env);
 
   Napi::Function func = DefineClass(env, "ErlNode", {
     InstanceMethod("connect", &ErlNode::Connect),
@@ -158,7 +165,7 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
 /* Constructor. Takes a config object with cookie and thisNodeName properties */
 ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(info)  {
   Napi::Env env = info.Env();
-  Napi::HandleScope scope(env);
+  // Napi::HandleScope scope(env);
 
   serversocket = -1;
 
@@ -183,6 +190,15 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
   if (res < 0) {
     Napi::Error::New(env, "Connect init failed").ThrowAsJavaScriptException();
   }
+}
+
+ErlNode::~ErlNode() {
+  printf("The destructor is executed\n");
+  printf("Closing sockets, publish: %d serversocket: %d\n", publishfd, serversocket);
+  if (publishfd > 0) close(publishfd);
+  publishfd = -1;
+  if (serversocket > 0) close(serversocket);
+  serversocket = -1;
 }
 
 /* Create a connection to an erlang node using this ErlNode object. Takes remote node name as parameter */
@@ -236,10 +252,12 @@ Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
   }
   port = ntohs(serv_addr.sin_port);
 
-  if ((publishfd = ei_publish(&einode, port)) < 0)
+  if ((publishfd = ei_publish(&einode, port)) < 0) {
+    printf("Error when publishing server. fd: %d, errno: %d, erl_errno: %d\n", publishfd, errno, erl_errno);
     Napi::Error::New(env, "Error on publishing server").ThrowAsJavaScriptException();
-
+  }
   printf("Published server on port %d\n", port);
+  stopServer = false;
   }
 
   return Napi::Number::New(env, port);
@@ -253,16 +271,25 @@ Napi::Value ErlNode::Accept(const Napi::CallbackInfo& info) {
   }
   Napi::Function callback = info[0].As<Napi::Function>();
 
-  ServerWorker* wk = new ServerWorker(callback, &einode, serversocket, publishfd);
-  wk->Queue();
+  if (stopServer) {
+    printf("Closing sockets, publish: %d serversocket: %d\n", publishfd, serversocket);
+    if (publishfd > 0) close(publishfd);
+    publishfd = -1;
+    if (serversocket > 0) close(serversocket);
+    serversocket = -1;
+    callback.Call(env.Null(), { Napi::Number::New(env, -1), Napi::String::New(env, "Stopped") });
+  }
+
+  if (serversocket > 0) {
+    swk = new ServerWorker(callback, &einode, serversocket, publishfd);
+    swk->Queue();
+  }
 
   return env.Undefined();
 }
 
 Napi::Value ErlNode::Unpublish(const Napi::CallbackInfo& info) {
-  printf("Closing sockets, publish: %d serversocket: %d\n", publishfd, serversocket);
-  if (publishfd > 0) close(publishfd);
-  if (serversocket > 0) close(serversocket);
+  stopServer = true;
   return info.Env().Undefined();
 }
 
@@ -375,6 +402,7 @@ int ErlNode::SetUpConnection(Napi::Env env, std::vector<char> remoteNode) {
        if (erl_errno == EIO) {
          Napi::Error::New(env, "I/O Error").ThrowAsJavaScriptException();
        }
+       printf("Connect failed. fd: %d, errno: %d, erl_errno: %d\n", fd, errno, erl_errno);
        Napi::Error::New(env, "Connect failed").ThrowAsJavaScriptException();
      }
 
