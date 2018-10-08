@@ -6,14 +6,15 @@
 	reg_rec_send/1]).
 
 send_rec_delay(ArgList) ->
-	timer:apply_after(500, ?MODULE, send_rec, ArgList).
+	timer:apply_after(250, ?MODULE, send_rec, ArgList).
 
 send_rec([Node, Suffix]) ->
 	send_rec(Node, Suffix).
 
 send_rec(NodeStr, Suffix) ->
 	Node = list_to_atom(NodeStr),
-	{any, Node} ! list_to_atom("atomFromErl" ++ Suffix),
+	RemoteName = list_to_atom(Suffix),
+	{RemoteName, Node} ! list_to_atom("atomFromErl" ++ Suffix),
 	ExpectedAtom = list_to_atom("atomFromJS" ++ Suffix),
 	RetCode1 = receive 
 		ExpectedAtom -> 0;
@@ -22,7 +23,7 @@ send_rec(NodeStr, Suffix) ->
 		5000 -> 8
 	end,
 
-	{any, Node} ! {list_to_atom("atomFromErl" ++ Suffix), "StringFromErl" ++ Suffix, 42 + list_to_integer(Suffix)},
+	{RemoteName, Node} ! {list_to_atom("atomFromErl" ++ Suffix), "StringFromErl" ++ Suffix, 42 + list_to_integer(Suffix)},
 	ExpectedTerm = {list_to_atom("atomFromJS" ++ Suffix), "StringFromJS" ++ Suffix, 142 + list_to_integer(Suffix)},
 	RetCode2 = receive
 		ExpectedTerm -> 0;
@@ -35,11 +36,12 @@ send_rec(NodeStr, Suffix) ->
 
 reg_rec_send([NodeStr, Suffix]) ->
 	Node = list_to_atom(NodeStr),
+	RemoteName = list_to_atom(Suffix),
 	register(list_to_atom("testprocess" ++ Suffix), self()),
 	ExpectedAtom = list_to_atom("atomFromJS" ++ Suffix),
 	RetCode = receive
 		ExpectedAtom ->
-			{any, Node} ! list_to_atom("atomFromErl2" ++ Suffix),
+			{RemoteName, Node} ! list_to_atom("atomFromErl2" ++ Suffix),
 			0;
 		_ -> 2
 	after

@@ -19,3 +19,11 @@ const erl_for_server = (sname, cookie, module, func, args, finishedcb) => {
 };
 
 module.exports.erl_for_server = erl_for_server;
+
+const erl_node = (sname, cookie, module, func, args, finishedcb) => {
+  let cmd = `cd test; erl -noshell -sname ${sname} -setcookie ${cookie} -run ${module} ${func}`;
+  cmd += args ? ` ${args}` : '';
+  const erlang = exec(cmd, null, finishedcb);
+};
+
+module.exports.erl_node = erl_node;

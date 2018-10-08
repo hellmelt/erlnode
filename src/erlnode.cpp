@@ -111,9 +111,7 @@ public:
   }
 
   void OnOK() {
-    // Napi::HandleScope scope(Env());
     if (fd == ERL_ERROR && errornumber != ECONNABORTED && errornumber != 0) {
-      printf("Accept failed, fd: %d, errno: %d, erl_errno: %d\n", fd, errornumber, erlerrornumber);
       Napi::Error::New(Env(), "Accept failed").ThrowAsJavaScriptException();
     } else if (fd == ERL_ERROR && erlerrornumber == ETIMEDOUT) {
       fd = ERL_TIMEOUT; // -5
@@ -142,8 +140,6 @@ Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
 
   // Required when process works with erl_interface, and presumably also ei
   erl_init(NULL, 0);
-
-  // Napi::HandleScope scope(env);
 
   Napi::Function func = DefineClass(env, "ErlNode", {
     InstanceMethod("connect", &ErlNode::Connect),
@@ -193,8 +189,6 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
 }
 
 ErlNode::~ErlNode() {
-  printf("The destructor is executed\n");
-  printf("Closing sockets, publish: %d serversocket: %d\n", publishfd, serversocket);
   if (publishfd > 0) close(publishfd);
   publishfd = -1;
   if (serversocket > 0) close(serversocket);
@@ -218,7 +212,6 @@ Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   int port = -1;
 
-  printf("serversocket: %d\n", serversocket);
   if (serversocket > 0) {
     Napi::Error::New(env, "Server already started").ThrowAsJavaScriptException();
   } else {
@@ -253,10 +246,8 @@ Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
   port = ntohs(serv_addr.sin_port);
 
   if ((publishfd = ei_publish(&einode, port)) < 0) {
-    printf("Error when publishing server. fd: %d, errno: %d, erl_errno: %d\n", publishfd, errno, erl_errno);
     Napi::Error::New(env, "Error on publishing server").ThrowAsJavaScriptException();
   }
-  printf("Published server on port %d\n", port);
   stopServer = false;
   }
 
@@ -272,7 +263,6 @@ Napi::Value ErlNode::Accept(const Napi::CallbackInfo& info) {
   Napi::Function callback = info[0].As<Napi::Function>();
 
   if (stopServer) {
-    printf("Closing sockets, publish: %d serversocket: %d\n", publishfd, serversocket);
     if (publishfd > 0) close(publishfd);
     publishfd = -1;
     if (serversocket > 0) close(serversocket);
@@ -402,7 +392,6 @@ int ErlNode::SetUpConnection(Napi::Env env, std::vector<char> remoteNode) {
        if (erl_errno == EIO) {
          Napi::Error::New(env, "I/O Error").ThrowAsJavaScriptException();
        }
-       printf("Connect failed. fd: %d, errno: %d, erl_errno: %d\n", fd, errno, erl_errno);
        Napi::Error::New(env, "Connect failed").ThrowAsJavaScriptException();
      }
 
