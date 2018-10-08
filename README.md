@@ -1,5 +1,5 @@
 # erlnode
-Erlang cnode functionality based on encapsulating erl_interface C library using napi and node-addon-api.
+Erlang cnode functionality based on encapsulating erl_interface C library using napi and cnode-addon-api.
 
 This project is very beta. You can create cnodes, connect and accept, send and receive terms.
 
@@ -10,9 +10,9 @@ But erlang.js has not implemented all required conversions, so a fork of that re
 Probably works on newer versions. Does often not work on older versions. I just document my setup.
 
 * macOS High Sierra (10.13.6)
-* node v8.12.0
+* cnode v8.12.0
 * yarn 1.7.0 (or npm)
-* maybe global install of node-gyp?
+* maybe global install of cnode-gyp?
 * XCode command line tools, like C++ compiler and linker?
 * erlang 20.2.2
 * clone https://github.com/hellmelt/erlang.js.git to a directory next door

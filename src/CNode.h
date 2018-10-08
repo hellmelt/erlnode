@@ -15,11 +15,11 @@ Napi::Value Send(const Napi::CallbackInfo& info);
 Napi::Value Disconnect(const Napi::CallbackInfo& info);
 
 
-class ErlNode : public Napi::ObjectWrap<ErlNode> {
+class CNode : public Napi::ObjectWrap<CNode> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
-  ErlNode(const Napi::CallbackInfo& info);
-  ~ErlNode();
+  CNode(const Napi::CallbackInfo& info);
+  ~CNode();
 
   static int creation;
 

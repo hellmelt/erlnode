@@ -11,7 +11,7 @@ Ximplement decoding in erlang.js
 -Implement rpc
 XImplement disconnect
 XCreate api, hiding binary_to_term
--Create a node gen_server
+-Create a cnode gen_server
 Xautomated tests
 -Use timeout versions of ei-functions
 -Use MakeCallback() instead of Call()?

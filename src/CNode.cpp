@@ -1,4 +1,4 @@
-#include "erlnode.h"
+#include "CNode.h"
 #include <unistd.h>
 
 /* Utility to get something compatible to char *, does not need explicit free */
@@ -130,36 +130,36 @@ public:
 };
 
 /* Init of a static thing */
-int ErlNode::creation = 0;
+int CNode::creation = 0;
 
 /* Some kind of forward reference, needed when wrapping a C++ class */
-Napi::FunctionReference ErlNode::constructor;
+Napi::FunctionReference CNode::constructor;
 
-/* Napi init. Wraps the class ErlNode, publishes methods on the wrapped class */
-Napi::Object ErlNode::Init(Napi::Env env, Napi::Object exports) {
+/* Napi init. Wraps the class CNode, publishes methods on the wrapped class */
+Napi::Object CNode::Init(Napi::Env env, Napi::Object exports) {
 
   // Required when process works with erl_interface, and presumably also ei
   erl_init(NULL, 0);
 
-  Napi::Function func = DefineClass(env, "ErlNode", {
-    InstanceMethod("connect", &ErlNode::Connect),
-    InstanceMethod("server", &ErlNode::Server),
-    InstanceMethod("accept", &ErlNode::Accept),
-    InstanceMethod("regSend", &ErlNode::RegSend),
-    InstanceMethod("self", &ErlNode::Self),
-    InstanceMethod("unpublish", &ErlNode::Unpublish)
+  Napi::Function func = DefineClass(env, "CNode", {
+    InstanceMethod("connect", &CNode::Connect),
+    InstanceMethod("server", &CNode::Server),
+    InstanceMethod("accept", &CNode::Accept),
+    InstanceMethod("regSend", &CNode::RegSend),
+    InstanceMethod("self", &CNode::Self),
+    InstanceMethod("unpublish", &CNode::Unpublish)
   });
 
   constructor = Napi::Persistent(func);
   constructor.SuppressDestruct();
 
-  exports.Set("ErlNode", func);
+  exports.Set("CNode", func);
 
   return exports;
 }
 
 /* Constructor. Takes a config object with cookie and thisNodeName properties */
-ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(info)  {
+CNode::CNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<CNode>(info)  {
   Napi::Env env = info.Env();
   // Napi::HandleScope scope(env);
 
@@ -188,27 +188,27 @@ ErlNode::ErlNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ErlNode>(inf
   }
 }
 
-ErlNode::~ErlNode() {
+CNode::~CNode() {
   if (publishfd > 0) close(publishfd);
   publishfd = -1;
   if (serversocket > 0) close(serversocket);
   serversocket = -1;
 }
 
-/* Create a connection to an erlang node using this ErlNode object. Takes remote node name as parameter */
-Napi::Value ErlNode::Connect(const Napi::CallbackInfo& info) {
+/* Create a connection to an erlang node using this CNode object. Takes remote node name as parameter */
+Napi::Value CNode::Connect(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   if (info.Length() < 1 || !info[0].IsString()) {
     Napi::TypeError::New(env, "Remote node name (string) expected").ThrowAsJavaScriptException();
   }
   std::vector<char> connect = toChar(info[0]);
 
-  int connectionId = ErlNode::SetUpConnection(env, connect);
+  int connectionId = CNode::SetUpConnection(env, connect);
 
   return Napi::Number::New(env, connectionId);
 }
 
-Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
+Napi::Value CNode::Server(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
   int port = -1;
 
@@ -254,7 +254,7 @@ Napi::Value ErlNode::Server(const Napi::CallbackInfo& info) {
   return Napi::Number::New(env, port);
 }
 
-Napi::Value ErlNode::Accept(const Napi::CallbackInfo& info) {
+Napi::Value CNode::Accept(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1 || !info[0].IsFunction()) {
@@ -278,13 +278,13 @@ Napi::Value ErlNode::Accept(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
-Napi::Value ErlNode::Unpublish(const Napi::CallbackInfo& info) {
+Napi::Value CNode::Unpublish(const Napi::CallbackInfo& info) {
   stopServer = true;
   return info.Env().Undefined();
 }
 
 /* Send to registered process name */
-Napi::Value ErlNode::RegSend(const Napi::CallbackInfo& info) {
+Napi::Value CNode::RegSend(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 1 || !info[0].IsNumber()) {
@@ -309,7 +309,7 @@ Napi::Value ErlNode::RegSend(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
-Napi::Value ErlNode::Self(const Napi::CallbackInfo& info) {
+Napi::Value CNode::Self(const Napi::CallbackInfo& info) {
   return encodePid(ei_self(&einode), info.Env());
 }
 
@@ -380,7 +380,7 @@ Napi::Value Disconnect(const Napi::CallbackInfo& info) {
 }
 
 /* Does the stuff for Connect */
-int ErlNode::SetUpConnection(Napi::Env env, std::vector<char> remoteNode) {
+int CNode::SetUpConnection(Napi::Env env, std::vector<char> remoteNode) {
   int fd;
     if ((fd = ei_connect(&einode, &remoteNode[0])) < 0) {
       if (erl_errno == EHOSTUNREACH) {

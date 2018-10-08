@@ -1,14 +1,14 @@
 // Should be someting like erlInterface = ....
-const erlNode = require('./build/release/erlnode.node');
+const erlInterface = require('./build/release/erlInterface.node');
 const binary_to_term = require('../erlang.js').binary_to_term;
 const term_to_binary = require('../erlang.js').term_to_binary;
 
 // Sould be class ErlNode
-class cNode {
+class ErlNode {
   constructor(cookie, nodeName, port, acceptCallback) {
-    // Todo: This erlNode should be private
+    // Todo: The cnode should be a private property
     // Should be someting like this.cnode = new erlInterface.CNode
-    this.node = new erlNode.ErlNode(
+    this.cnode = new erlInterface.CNode(
       {
         cookie: cookie,
         thisNodeName: nodeName
@@ -19,12 +19,12 @@ class cNode {
     this.acceptCallback = acceptCallback;
     this.connections = {};
 
-    this.node.server(port || 0);
+    this.cnode.server(port || 0);
     this.acceptLoop();
   }
   // Private method
   connect (nodeName) {
-    const connection = this.node.connect(nodeName);
+    const connection = this.cnode.connect(nodeName);
     this.receiveLoop(connection);
     this.connections[nodeName] = connection;
     return connection;
@@ -35,7 +35,7 @@ class cNode {
   //
   // Todo: Find a way to make this method private
   receiveLoop (connection) {
-    erlNode.receive(connection, (status, from, to, buffer) => {
+    erlInterface.receive(connection, (status, from, to, buffer) => {
       if (status === 'ok') {
         for (let i = 0; i < this.persistentReceiveCallback.length; i++) {
           if (typeof this.persistentReceiveCallback[i] === 'function') {
@@ -61,7 +61,7 @@ class cNode {
   }
   // Private
   acceptLoop () {
-    this.node.accept((connection, nodename) => {
+    this.cnode.accept((connection, nodename) => {
       // Timeout
       if (connection === -5) {  // ETIMEDOUT
         this.acceptLoop();
@@ -76,11 +76,11 @@ class cNode {
     });
   }
   unpublish () {
-    this.node.unpublish();
+    this.cnode.unpublish();
   }
   // Private
   disconnect (connection) {
-    erlNode.disconnect(connection);
+    erlInterface.disconnect(connection);
   }
   receiveOnce (callback) {
       this.receiveCallback.push(callback);
@@ -104,7 +104,7 @@ class cNode {
       } else {
         connection = this.connect(node);
       }
-      erlNode.send(connection, term_to_binary(to), term_to_binary(term));
+      erlInterface.send(connection, term_to_binary(to), term_to_binary(term));
     } else {
       throw('Invalid pid, node missing');
     }
@@ -116,11 +116,11 @@ class cNode {
     } else {
       connection = this.connect(node);
     }
-    this.node.regSend(connection, to, term_to_binary(term));
+    this.cnode.regSend(connection, to, term_to_binary(term));
   }
   self () {
-    return binary_to_term(this.node.self());
+    return binary_to_term(this.cnode.self());
   }
 }
 
-module.exports.cNode = cNode;
+module.exports = ErlNode;

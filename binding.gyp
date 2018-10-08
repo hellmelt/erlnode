@@ -1,11 +1,11 @@
 {
   "targets": [
     {
-      "target_name": "erlnode",
+      "target_name": "erlInterface",
 
       "sources": [
         "src/binding.cpp",
-        "src/erlnode.cpp"
+        "src/CNode.cpp"
       ],
 
       "include_dirs": [
