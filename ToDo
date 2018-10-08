@@ -1,18 +1,18 @@
-XGet thread and callback to work
-XReceive should contain info from erlang_msg
--Clean up code, understand what you are doing
--Clean up build warnings and messages
--Clean up all allocated memory
-XImplement send
-Xact as a server
--long host names
--ei_x functions rather than just ei_
-Ximplement decoding in erlang.js
--Implement rpc
-XImplement disconnect
-XCreate api, hiding binary_to_term
--Create a cnode gen_server
-Xautomated tests
--Use timeout versions of ei-functions
--Use MakeCallback() instead of Call()?
-Xself()
+X Get thread and callback to work
+X Receive should contain info from erlang_msg
+- Clean up code, understand what you are doing
+- Clean up build warnings and messages
+- Clean up all allocated memory
+X Implement send
+X act as a server
+- long host names
+- ei_x functions rather than just ei_
+X implement decoding in erlang.js
+- Implement rpc
+X Implement disconnect
+X Create api, hiding binary_to_term
+- Create a cnode gen_server
+X automated tests
+- Use timeout versions of ei-functions
+X Use MakeCallback() instead of Call()? - No! See https://github.com/nodejs/node-addon-api/pull/361
+X self()

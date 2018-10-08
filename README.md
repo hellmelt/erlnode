@@ -1,7 +1,10 @@
-# erlnode
-Erlang cnode functionality based on encapsulating erl_interface C library using napi and cnode-addon-api.
+# ErlNode
+Erlang cnode functionality based on encapsulating erl_interface C library using napi and node-addon-api.
 
-This project is very beta. You can create cnodes, connect and accept, send and receive terms.
+This project is very alpha. You can create erlang cnodes in node, send and receive terms. Connect to and accept connections from other 
+erlang nodes are managed internally.
+
+The node add-on encapsulates some erl_interface functions. The stuff that makes things tick is implemented in JavaScript.
 
 erlang.js is used for conversions from a javascript format, representing erlang data types, to erlang binary format, and vice versa.
 But erlang.js has not implemented all required conversions, so a fork of that repo is part of this project.
@@ -24,7 +27,7 @@ code:root_dir().
 ```
 * yarn install
 ## How to use
-See the code in directory test.
+See the code in directory test, and the "public" methods in engine.js.
 
 ## Automatic tests
 ### Prerequisites
