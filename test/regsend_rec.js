@@ -7,8 +7,7 @@
  */
 
 const tap = require('tap');
-const erl_for_client = require('./helpers/start_erlang').erl_for_client;
-const erl_node = require('./helpers/start_erlang').erl_node;
+const erlang_node = require('./helpers/start_erlang').erlang_node;
 const hostname = require('os').hostname;
 const ErlNode = require('../engine.js');
 
@@ -29,12 +28,13 @@ tap.test('RegSend Receive to one erlNode', (cT) => {
   const nodename = 'testjs@' + hostname().toLowerCase().split('.')[0];
   const erlNode = new ErlNode('Oreo', 'testjs');
   const suffix = '4';
-  erl_for_client('teste2', 'Oreo', 'teste', 'reg_rec_send', nodename + ' ' + suffix,
-    () => regsend_rec(erlNode, 'teste2', cT, suffix),
+  erlang_node('teste2', 'Oreo', 'teste', 'reg_rec_send', nodename + ' ' + suffix,
     (res) => {
       erlNode.unpublish();
       cT.equal(res, null, 'Erlang erlNode received correct atom');
     });
+  setTimeout(() => regsend_rec(erlNode, 'teste2', cT, suffix),
+  200);  
 });
 
 tap.test('Connect RegSend Receive two nodes one erlNode', (cT) => {
@@ -42,19 +42,21 @@ tap.test('Connect RegSend Receive two nodes one erlNode', (cT) => {
   const nodename = 'testjs0@' + hostname().toLowerCase().split('.')[0];
   const erlNode = new ErlNode('Oreo', 'testjs0');
   const suffix_1 = '5';
-  erl_for_client('teste5', 'Oreo', 'teste', 'reg_rec_send', nodename + ' ' + suffix_1,
-    () => regsend_rec(erlNode, 'teste5', cT, suffix_1),
+  erlang_node('teste5', 'Oreo', 'teste', 'reg_rec_send', nodename + ' ' + suffix_1,
     (res) => {
       cT.equal(res, null, 'Erlang erlNode received correct atom');
     });
+    setTimeout(() => regsend_rec(erlNode, 'teste5', cT, suffix_1),
+      200);
 
   const suffix_2 = '6';
-  erl_for_client('teste6', 'Oreo', 'teste', 'reg_rec_send', nodename + ' ' + suffix_2,
-    () => regsend_rec(erlNode, 'teste6', cT, suffix_2),
+  erlang_node('teste6', 'Oreo', 'teste', 'reg_rec_send', nodename + ' ' + suffix_2,
     (res) => {
       erlNode.unpublish();
       cT.equal(res, null, 'Erlang erlNode received correct atom');
     });
+    setTimeout(() => regsend_rec(erlNode, 'teste6', cT, suffix_2),
+      200);
 });
 
 tap.test('Connect RegSend Receive two nodes two erlNodes', (cT) => {
@@ -62,20 +64,22 @@ tap.test('Connect RegSend Receive two nodes two erlNodes', (cT) => {
   const nodename_1 = 'testjs1@' + hostname().toLowerCase().split('.')[0];
   const erlNode_1 = new ErlNode('Oreo', 'testjs1');
   const suffix_1 = '5';
-  erl_for_client('teste5', 'Oreo', 'teste', 'reg_rec_send', nodename_1 + ' ' + suffix_1,
-    () => regsend_rec(erlNode_1, 'teste5', cT, suffix_1),
+  erlang_node('teste5', 'Oreo', 'teste', 'reg_rec_send', nodename_1 + ' ' + suffix_1,
     (res) => {
       erlNode_1.unpublish();
       cT.equal(res, null, 'Erlang erlNode received correct atom');
     });
+  setTimeout(() => regsend_rec(erlNode_1, 'teste5', cT, suffix_1),
+    200);
 
   const nodename_2 = 'testjs2@' + hostname().toLowerCase().split('.')[0];
   const erlNode_2 = new ErlNode('Oreo', 'testjs2');
   const suffix_2 = '6';
-  erl_for_client('teste6', 'Oreo', 'teste', 'reg_rec_send', nodename_2 + ' ' + suffix_2,
-    () => regsend_rec(erlNode_2, 'teste6', cT, suffix_2),
+  erlang_node('teste6', 'Oreo', 'teste', 'reg_rec_send', nodename_2 + ' ' + suffix_2,
     (res) => {
       erlNode_2.unpublish();
       cT.equal(res, null, 'Erlang erlNode received correct atom');
     });
+    setTimeout(() => regsend_rec(erlNode_2, 'teste6', cT, suffix_2),
+      200);
 });

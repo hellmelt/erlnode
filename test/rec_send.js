@@ -8,7 +8,7 @@
 
 const tap = require('tap');
 const hostname = require('os').hostname;
-const erl_node = require('./helpers/start_erlang').erl_node;
+const erlang_node = require('./helpers/start_erlang').erlang_node;
 const ErlNode = require('../engine.js');
 
 // Test sequence for each of the tests in this module.
@@ -34,7 +34,7 @@ tap.test('Receive Send to one erlNode one erlNode', (cT) => {
   const suffix = '0';
   const erlNode = new ErlNode('Oreo', 'test');
   rec_send(erlNode, 'teste', cT, suffix);
-  erl_node('teste', 'Oreo', 'teste', 'send_rec_delay', nodename + ' ' + suffix,
+  erlang_node('teste', 'Oreo', 'teste', 'send_rec_delay', nodename + ' ' + suffix,
     (res) => {
       erlNode.unpublish();
       cT.equal(res, null, 'Erlang erlNode received correct terms');
@@ -48,14 +48,14 @@ tap.test('Receive Send to two nodes one erlNode', (cT) => {
   const nodename = 'testjs@' + hostname().toLowerCase().split('.')[0];
   const suffix_1 = '1';
   rec_send(erlNode, 'test1', cT, suffix_1);
-  erl_node('test1', 'Oreo', 'teste', 'send_rec_delay', nodename + ' ' + suffix_1,
+  erlang_node('test1', 'Oreo', 'teste', 'send_rec_delay', nodename + ' ' + suffix_1,
     (res) => {
       cT.equal(res, null, 'Erlang erlNode received correct terms');
     });
 
   const suffix_2 = '2';
   rec_send(erlNode, 'test2', cT, suffix_2);
-  erl_node('test2', 'Oreo', 'teste', 'send_rec_delay', nodename + ' ' + suffix_2,
+  erlang_node('test2', 'Oreo', 'teste', 'send_rec_delay', nodename + ' ' + suffix_2,
     (res) => {
       erlNode.unpublish();
       cT.equal(res, null, 'Erlang erlNode received correct terms');
@@ -68,7 +68,7 @@ tap.test('Receive Send to two nodes two erlNodes', (cT) => {
   const nodename_1 = 'testjs1@' + hostname().toLowerCase().split('.')[0];
   const suffix_1 = '1';
   rec_send(erlNode_1, 'test1', cT, suffix_1);
-  erl_node('test1', 'Oreo', 'teste', 'send_rec_delay', nodename_1 + ' ' + suffix_1,
+  erlang_node('test1', 'Oreo', 'teste', 'send_rec_delay', nodename_1 + ' ' + suffix_1,
     (res) => {
       erlNode_1.unpublish();
       cT.equal(res, null, 'Erlang erlNode received correct terms');
@@ -78,7 +78,7 @@ tap.test('Receive Send to two nodes two erlNodes', (cT) => {
   const nodename_2 = 'testjs2@' + hostname().toLowerCase().split('.')[0];
   const suffix_2 = '2';
   rec_send(erlNode_2, 'test2', cT, suffix_2);
-  erl_node('test2', 'Oreo', 'teste', 'send_rec_delay', nodename_2 + ' ' + suffix_2,
+  erlang_node('test2', 'Oreo', 'teste', 'send_rec_delay', nodename_2 + ' ' + suffix_2,
     (res) => {
       erlNode_2.unpublish();
       cT.equal(res, null, 'Erlang erlNode received correct terms');

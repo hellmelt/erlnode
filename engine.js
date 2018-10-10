@@ -14,8 +14,8 @@ class ErlNode {
         thisNodeName: nodeName
       });
     // Todo: These members should be private
-    this.persistentReceiveCallback = [];
-    this.receiveCallback = [];
+    this.persistentReceiveCallbacks = [];
+    this.receiveCallbacks = [];
     this.acceptCallback = acceptCallback;
     this.connections = {};
 
@@ -37,17 +37,17 @@ class ErlNode {
   receiveLoop (connection) {
     erlInterface.receive(connection, (status, from, to, buffer) => {
       if (status === 'ok') {
-        for (let i = 0; i < this.persistentReceiveCallback.length; i++) {
-          if (typeof this.persistentReceiveCallback[i] === 'function') {
-            this.persistentReceiveCallback[i](binary_to_term(from), to, binary_to_term(buffer));
+        for (let i = 0; i < this.persistentReceiveCallbacks.length; i++) {
+          if (typeof this.persistentReceiveCallbacks[i] === 'function') {
+            this.persistentReceiveCallbacks[i](binary_to_term(from), to, binary_to_term(buffer));
           } // Todo: Else remove item from array?
         }
-        for (let i = 0; i < this.receiveCallback.length; i++) {
-          if (typeof this.receiveCallback[i] === 'function') {
-            this.receiveCallback[i](binary_to_term(from), to, binary_to_term(buffer));
+        for (let i = 0; i < this.receiveCallbacks.length; i++) {
+          if (typeof this.receiveCallbacks[i] === 'function') {
+            this.receiveCallbacks[i](binary_to_term(from), to, binary_to_term(buffer));
           }
         }
-        this.receiveCallback = [];
+        this.receiveCallbacks = [];
 
         this.receiveLoop(connection);
       } else if (status === 'closed') {
@@ -83,10 +83,10 @@ class ErlNode {
     erlInterface.disconnect(connection);
   }
   receiveOnce (callback) {
-      this.receiveCallback.push(callback);
+      this.receiveCallbacks.push(callback);
   }
   receiveCallback (callback) {
-      this.persistentReceiveCallback.push(callback);
+      this.persistentReceiveCallbacks.push(callback);
   }
   receive () {
     return new Promise((resolve, reject) => {
