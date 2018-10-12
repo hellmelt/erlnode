@@ -9,7 +9,7 @@
 const tap = require('tap');
 const erlang_node = require('./helpers/start_erlang').erlang_node;
 const hostname = require('os').hostname;
-const ErlNode = require('../engine.js');
+const ErlNode = require('../src/engine.js');
 
 // Test sequence for each of the tests in this moudule.
 //

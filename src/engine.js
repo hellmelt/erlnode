@@ -1,13 +1,10 @@
-// Should be someting like erlInterface = ....
-const erlInterface = require('./build/release/erlInterface.node');
-const binary_to_term = require('../erlang.js').binary_to_term;
-const term_to_binary = require('../erlang.js').term_to_binary;
+const erlInterface = require('../build/Release/erlInterface.node');
+const binary_to_term = require('../../erlang.js/api.js').binary_to_term;
+const term_to_binary = require('../../erlang.js/api.js').term_to_binary;
 
-// Sould be class ErlNode
 class ErlNode {
   constructor(cookie, nodeName, port, acceptCallback) {
     // Todo: The cnode should be a private property
-    // Should be someting like this.cnode = new erlInterface.CNode
     this.cnode = new erlInterface.CNode(
       {
         cookie: cookie,
@@ -18,6 +15,7 @@ class ErlNode {
     this.receiveCallbacks = [];
     this.acceptCallback = acceptCallback;
     this.connections = {};
+    this.registeredNames = {};
 
     this.cnode.server(port || 0);
     this.acceptLoop();
@@ -37,14 +35,22 @@ class ErlNode {
   receiveLoop (connection) {
     erlInterface.receive(connection, (status, from, to, buffer) => {
       if (status === 'ok') {
+        const pidfrom = binary_to_term(from);
+        const data = binary_to_term(buffer);
+        if (typeof this.registeredNames[to] === 'function') {
+          this.registeredNames[to](this, pidfrom, data);
+        } else if (typeof this.registeredNames[to] === 'object' && typeof this.registeredNames[to].receive === 'function') {
+          this.registeredNames[to].receive(this, pidfrom, data);
+        }
+
         for (let i = 0; i < this.persistentReceiveCallbacks.length; i++) {
           if (typeof this.persistentReceiveCallbacks[i] === 'function') {
-            this.persistentReceiveCallbacks[i](binary_to_term(from), to, binary_to_term(buffer));
+            this.persistentReceiveCallbacks[i](pidfrom, to, data);
           } // Todo: Else remove item from array?
         }
         for (let i = 0; i < this.receiveCallbacks.length; i++) {
           if (typeof this.receiveCallbacks[i] === 'function') {
-            this.receiveCallbacks[i](binary_to_term(from), to, binary_to_term(buffer));
+            this.receiveCallbacks[i](pidfrom, to, data);
           }
         }
         this.receiveCallbacks = [];
@@ -120,6 +126,10 @@ class ErlNode {
   }
   self () {
     return binary_to_term(this.cnode.self());
+  }
+
+  register (name, what) {
+    this.registeredNames[name] = what;
   }
 }
 

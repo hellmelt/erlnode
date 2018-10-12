@@ -9,7 +9,7 @@
 const tap = require('tap');
 const hostname = require('os').hostname;
 const erlang_node = require('./helpers/start_erlang').erlang_node;
-const ErlNode = require('../engine.js');
+const ErlNode = require('../src/engine.js');
 
 // Test sequence for each of the tests in this module.
 //
@@ -19,6 +19,7 @@ const rec_send = async (erlNode, erlangNodeName, childTest, suffix) => {
   let from, to, term;
   do {
     ({ from, to, term } = await erlNode.receive());
+    console.log('To: ', to, typeof to);
   } while (to !== suffix.toString());
   childTest.same(term, {a: 'atomFromErl' + suffix}, 'Received atom');
   erlNode.send(from, {a: 'atomFromJS' + suffix});
