@@ -13,7 +13,7 @@ But erlang.js has not implemented all required conversions, so a fork of that re
 Probably works on newer versions. Does often not work on older versions. I just document my setup.
 
 * macOS High Sierra (10.13.6)
-* cnode v8.12.0
+* node v8.12.0
 * yarn 1.7.0 (or npm)
 * maybe global install of cnode-gyp?
 * XCode command line tools, like C++ compiler and linker?
