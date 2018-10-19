@@ -20,49 +20,69 @@ class gen_server {
 
     if (get_atom(request) === '$gen_call') {
       if (rest.length === 2) {
-        this.call(erlNode, rest);
+        this.handleCall(erlNode, rest);
       }
     } else if (get_atom(request) === '$gen_cast') {
       if (rest.length === 1) {
-        this.cast(rest);
+        this.handleCast(rest);
       }
     } else {
-      throw('Bad form of message to gen_server');
+      this.handle_info(term);
     }
   }
 
-  call (erlNode, [from, data]) {
-    let func, args;
+  getFunc (data) {
+    let func, args, aFunc;
     if (is_atom(data)) {
       func = get_atom(data);
     } else if (is_tuple(data)) {
-      [funca, args] = get_tuple(data);
-      if (is_atom(funca)) {
-        func = get_atom(funca);
+      [aFunc, ...args] = get_tuple(data);
+      if (is_atom(aFunc)) {
+        func = get_atom(aFunc);
       }
     }
+    return { func, args };
+  }
 
+  handleCall (erlNode, [from, data]) {
+    let { func, args } = this.getFunc(data);
     let reply;
     const funcname = 'handle_call_' + func;
     if (func && typeof this[funcname] === 'function') {
-      reply = this[funcname](args);
+      reply = this[funcname].apply(null, args);
     } else {
       reply = this.handle_call(data);
     }
 
-    let fromt;
-    if (fromt = get_tuple(from)) {
-      const [pid, ref] = fromt;
+    let tFrom;
+    if (tFrom = get_tuple(from)) {
+      const [pid, ref] = tFrom;
       if (is_pid(pid) && is_reference(ref)) {
         erlNode.send(pid, set_tuple([ref, reply]));
       }
     }
   }
-
   handle_call (data) {
-    return set_tuple([set_atom('error'), 'No matching function']);
+    return set_tuple([set_atom('error'), 'Unhandled call, no matching function']);
   }
 
+  handleCast ([data]) {
+    let {func, args} = this.getFunc(data);
+    const funcname = 'handle_cast_' + func;
+    if (func && typeof this[funcname] === 'function') {
+      console.log('handleCast: ', funcname, args);
+      this[funcname].apply(null, args);
+    } else {
+      this.handle_cast(data);
+    }
+  }
+  handle_cast (data) {
+    console.log('Unhandled cast: ', data);
+  }
+
+  handle_info (data) {
+    console.log('Unexpected message: ', data);
+  }
 }
 
 module.exports = gen_server;

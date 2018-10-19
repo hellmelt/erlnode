@@ -42,6 +42,11 @@ const is_reference = (term) => {
   return (typeof term === 'object' && (term.hasOwnProperty('n') || term.hasOwnProperty('reference')));
 };
 
+const is_map = (term) => {
+  // Not totally waterproof
+  return term instanceof Map;
+};
+
 const get_atom = (atom) => {
   return is_atom(atom) ? (atom.a ? atom.a : atom.atom) : undefined;
 };

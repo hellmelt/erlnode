@@ -19,7 +19,7 @@ const regsend_rec = async (erlNode, erlangNodeName, childTest, suffix) => {
   let to, term;
   do {
     ({ to, term } = await erlNode.receive());
-  } while (to !== suffix.toString());
+  } while (to !== suffix);
   childTest.same(term, {a: 'atomFromErl2' + suffix}, 'Received correct atom');
 };
 

@@ -14,19 +14,21 @@ const ErlNode = require('../src/engine.js');
 // Test sequence for each of the tests in this module.
 //
 // Receive "your" atom, send a reply. Receive term, send reply.
-// Note: The second receive might fail, if a message from "wrong" node intercepts.
 const rec_send = async (erlNode, erlangNodeName, childTest, suffix) => {
   let from, to, term;
   do {
     ({ from, to, term } = await erlNode.receive());
-    console.log('To: ', to, typeof to);
-  } while (to !== suffix.toString());
+  } while (to !== suffix);
   childTest.same(term, {a: 'atomFromErl' + suffix}, 'Received atom');
   erlNode.send(from, {a: 'atomFromJS' + suffix});
-  erlNode.receiveOnce((from, to, term) => {
-    childTest.same(term, {t: [{a: 'atomFromErl' + suffix}, 'StringFromErl' + suffix, 42 + parseInt(suffix)]}, 'Received tuple/3');
-    erlNode.send(from, {t: [{a: 'atomFromJS' + suffix}, 'StringFromJS' + suffix, 142 + parseInt(suffix)]});
+  do {
+    erlNode.receiveOnce((from, to, term) => {
+      if (to === suffix) {
+        childTest.same(term, {t: [{a: 'atomFromErl' + suffix}, 'StringFromErl' + suffix, 42 + parseInt(suffix)]}, 'Received tuple/3');
+        erlNode.send(from, {t: [{a: 'atomFromJS' + suffix}, 'StringFromJS' + suffix, 142 + parseInt(suffix)]});
+      }
   });
+  } while (to !== suffix);
 };
 
 tap.test('Receive Send to one erlNode one erlNode', (cT) => {
