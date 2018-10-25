@@ -39,7 +39,7 @@ const is_pid = (term) => {
 };
 
 const is_reference = (term) => {
-  return (typeof term === 'object' && (term.hasOwnProperty('n') || term.hasOwnProperty('reference')));
+  return (typeof term === 'object' && (term.hasOwnProperty('n') || term.hasOwnProperty('new_reference')));
 };
 
 const is_map = (term) => {

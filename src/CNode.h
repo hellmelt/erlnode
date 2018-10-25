@@ -14,7 +14,6 @@ Napi::Value Receive(const Napi::CallbackInfo& info);
 Napi::Value Send(const Napi::CallbackInfo& info);
 Napi::Value Disconnect(const Napi::CallbackInfo& info);
 
-
 class CNode : public Napi::ObjectWrap<CNode> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);

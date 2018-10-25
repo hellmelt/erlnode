@@ -74,18 +74,35 @@ public:
         retCode = "closed";
       } else retCode = "error";
      }
+    // Todo: Make the following code prettier
      Napi::Buffer<char> FromPid;
-     if (retCode == "ok") {
+     if (retCode == "ok" && emsg.msgtype != ERL_SEND) {
       FromPid = encodePid(&emsg.from, Env());
      } else {
       FromPid = Napi::Buffer<char>::New(Env(), 0);
      }
+    
+    Napi::Buffer<char> ToPid;
+     if (retCode == "ok" && emsg.msgtype != ERL_REG_SEND) {
+       ToPid = encodePid(&emsg.to, Env());
+     } else {
+       ToPid = Napi::Buffer<char>::New(Env(), 0);
+     }
 
+      if (emsg.msgtype == ERL_REG_SEND) {
      Callback().Call(Env().Null(),  { 
       Napi::String::New(Env(), retCode), 
       FromPid, 
       Napi::String::New(Env(), emsg.toname), 
-      Napi::Buffer<char>::Copy(Env(), x.buff, size) });
+      Napi::Buffer<char>::Copy(Env(), x.buff, size) });   
+      } else {
+     Callback().Call(Env().Null(),  { 
+      Napi::String::New(Env(), retCode), 
+      Env().Undefined(), 
+      ToPid, 
+      Napi::Buffer<char>::Copy(Env(), x.buff, size) });      
+      }
+
      ei_x_free(&x);
    }
 
@@ -182,6 +199,7 @@ CNode::CNode(const Napi::CallbackInfo& info) : Napi::ObjectWrap<CNode>(info)  {
   std::vector<char> thisNodeName = toChar(config.Get("thisNodeName"));
 
   // connect_init
+  // Creation should increase only for crashed nodes? Only 2 bits, means 0, 1, 2, or 3.
   int res = ei_connect_init(&einode, &thisNodeName[0], &cookie[0], creation++);
   if (res < 0) {
     Napi::Error::New(env, "Connect init failed").ThrowAsJavaScriptException();

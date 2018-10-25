@@ -21,14 +21,12 @@ const rec_send = async (erlNode, erlangNodeName, childTest, suffix) => {
   } while (to !== suffix);
   childTest.same(term, {a: 'atomFromErl' + suffix}, 'Received atom');
   erlNode.send(from, {a: 'atomFromJS' + suffix});
-  do {
-    erlNode.receiveOnce((from, to, term) => {
+    erlNode.receiveCallback((from, to, term) => {
       if (to === suffix) {
         childTest.same(term, {t: [{a: 'atomFromErl' + suffix}, 'StringFromErl' + suffix, 42 + parseInt(suffix)]}, 'Received tuple/3');
         erlNode.send(from, {t: [{a: 'atomFromJS' + suffix}, 'StringFromJS' + suffix, 142 + parseInt(suffix)]});
       }
   });
-  } while (to !== suffix);
 };
 
 tap.test('Receive Send to one erlNode one erlNode', (cT) => {

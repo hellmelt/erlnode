@@ -3,11 +3,11 @@
 #include "CNode.h"
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
-   exports.Set(Napi::String::New(env, "receive"),
+  exports.Set(Napi::String::New(env, "receive"),
               Napi::Function::New(env, Receive));
-   exports.Set(Napi::String::New(env, "send"),
+  exports.Set(Napi::String::New(env, "send"),
               Napi::Function::New(env, Send));
-   exports.Set(Napi::String::New(env, "disconnect"),
+  exports.Set(Napi::String::New(env, "disconnect"),
               Napi::Function::New(env, Disconnect));
   return CNode::Init(env, exports);
 }
