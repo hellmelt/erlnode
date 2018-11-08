@@ -25,7 +25,13 @@ class ErlNode {
   }
   // Private method
   connect (nodeName) {
-    const connection = this.cnode.connect(nodeName);
+    let connection;
+    try {
+    connection = this.cnode.connect(nodeName);
+    }
+    catch (err) {
+      throw new Error('Connect failed, error: ', err);
+    }
     this.receiveLoop(connection);
     this.connections[nodeName] = connection;
     return connection;
@@ -127,7 +133,7 @@ class ErlNode {
       }
       erlInterface.send(connection, term_to_binary(to), term_to_binary(term));
     } else {
-      throw('Invalid pid, node missing');
+      throw new Error('Invalid pid, node missing');
     }
   };
   regSend (to, node, term) {

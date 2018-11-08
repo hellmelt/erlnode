@@ -2,13 +2,9 @@ const tap = require('tap');
 const hostname = require('os').hostname;
 const erlang_node = require('./helpers/start_erlang').erlang_node;
 const ErlNode = require('../src/engine.js');
-const gen_server = require('../src/gen_server');
 
 const erlName = 'e1@' + hostname().toLowerCase().split('.')[0]
 const erlnode = new ErlNode('Oreo', 'js');
-const client = new gen_server();
-erlnode.register('client', client);
-// erlnode.receiveCallback((from, to, data) => console.log('Test gen_server persistent cb: ', from, to, data));
 
 tap.test('Send call and cast to erlang gen_server', (ct) => {
     ct.plan(3);
