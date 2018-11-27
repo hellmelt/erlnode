@@ -90,7 +90,7 @@ public:
      }
 
       if (emsg.msgtype == ERL_REG_SEND) {
-     Callback().Call(Env().Null(),  { 
+     Callback().Call(Env().Null(),  {
       Napi::String::New(Env(), retCode), 
       FromPid, 
       Napi::String::New(Env(), emsg.toname), 
@@ -401,6 +401,7 @@ Napi::Value Disconnect(const Napi::CallbackInfo& info) {
 int CNode::SetUpConnection(Napi::Env env, std::vector<char> remoteNode) {
   int fd;
     if ((fd = ei_connect(&einode, &remoteNode[0])) < 0) {
+      printf("Connect failed. fd: %d Code: %d\n", fd, erl_errno);
       if (erl_errno == EHOSTUNREACH) {
          Napi::Error::New(env, "The remote node is unreachable").ThrowAsJavaScriptException();
          }

@@ -13,7 +13,7 @@ class Lodash extends gen_server {
             console.log('Data: ', data, 'Func: ', func, 'Args: ', args);
             return _[func](...args);
         }
-        throw('Call to undefined lodash function: ', data);
+        throw new Error('Call to undefined lodash function: ', data);
     }
 }
 

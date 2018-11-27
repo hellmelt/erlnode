@@ -8,13 +8,13 @@ class gen_server {
 
   receive (erlNode, from, term) {
     if (!is_tuple(term)) {
-      throw('Bad form of message to gen_server');
+      throw new Error('Bad form of message to gen_server');
     }
 
     const [request, ...rest] = get_tuple(term);
 
     if (!is_atom(request)) {
-      throw('Bad form of message to gen_server');
+      throw new Error('Bad form of message to gen_server');
     }
 
     if (get_atom(request) === '$gen_call') {
@@ -52,7 +52,6 @@ class gen_server {
     } else {
       reply = this.handle_call(data);
     }
-
     let tFrom;
     if (tFrom = get_tuple(from)) {
       const [pid, ref] = tFrom;

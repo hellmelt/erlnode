@@ -41,7 +41,7 @@ reg_rec_send([NodeStr, Suffix]) ->
 	ExpectedAtom = list_to_atom("atomFromJS" ++ Suffix),
 	RetCode = receive
 		ExpectedAtom ->
-			{RemoteName, Node} ! list_to_atom("atomFromErl2" ++ Suffix),
+			{RemoteName	, Node} ! list_to_atom("atomFromErl2" ++ Suffix),
 			0;
 		_ -> 2
 	after
