@@ -48,7 +48,7 @@ class gen_server {
     let reply;
     const funcname = 'handle_call_' + func;
     if (func && typeof this[funcname] === 'function') {
-      reply = this[funcname].apply(null, args);
+      reply = this[funcname].apply(this, args);
     } else {
       reply = this.handle_call(data);
     }
@@ -69,8 +69,7 @@ class gen_server {
     let {func, args} = this.getFunc(data);
     const funcname = 'handle_cast_' + func;
     if (func && typeof this[funcname] === 'function') {
-      console.log('handleCast: ', funcname, args);
-      this[funcname].apply(null, args);
+      this[funcname].apply(this, args);
     } else {
       this.handle_cast(data);
     }

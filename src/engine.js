@@ -53,12 +53,6 @@ class ErlNode {
             this.references.delete(this.get_ref_key(ref));
           }
         }
-        if (typeof this.registeredNames[to] === 'function') {
-          this.registeredNames[to](this, from, data);
-        } else if (typeof this.registeredNames[to] === 'object' && typeof this.registeredNames[to].receive === 'function') {
-          this.registeredNames[to].receive(this, from, data);
-        }
-
         for (let i = 0; i < this.persistentReceiveCallbacks.length; i++) {
           if (typeof this.persistentReceiveCallbacks[i] === 'function') {
             this.persistentReceiveCallbacks[i](from, to, data);
@@ -71,6 +65,13 @@ class ErlNode {
         }
         this.receiveCallbacks = [];
         this.receiveLoop(connection);
+
+        if (typeof this.registeredNames[to] === 'function') {
+          this.registeredNames[to](this, from, data);
+        } else if (typeof this.registeredNames[to] === 'object' && typeof this.registeredNames[to].receive === 'function') {
+          this.registeredNames[to].receive(this, from, data);
+        }
+
       } else if (status === 'closed') {
         for (let node in this.connections) {
           if (this.connections[node] === connection) {
