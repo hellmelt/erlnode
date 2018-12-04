@@ -1,9 +1,9 @@
 const tap = require('tap');
 const gen_server = require('../src/gen_server');
-const ErlNode = require('../src/engine.js');
+const ErlNode = require('../index');
 const erlang_node = require('./helpers/start_erlang').erlang_node;
 const hostname = require('os').hostname;
-const { set_tuple, set_atom } = require('../src/types');
+const { set_tuple, set_atom } = require('../../erlang.js/api');
 
 const erlnode = new ErlNode('Oreo', 'js1', 0); // , (conn, node) => console.log('Connected: ', conn, node));
 // erlnode.receiveCallback((from, to, data) => console.log('Received: ', from, to, data));

@@ -1,5 +1,5 @@
-const types = require('./types');
-const { is_tuple, get_tuple, tuple_length, set_tuple, is_atom, get_atom, set_atom, is_pid, is_reference } = types;
+const types = require('../../erlang.js/api');
+const { is_tuple, get_tuple, set_tuple, is_atom, get_atom, set_atom, is_pid, is_reference } = types;
 
 class gen_server {
   constructor() {
