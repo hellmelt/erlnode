@@ -17,3 +17,4 @@ X automated tests
 X Use MakeCallback() instead of Call()? - No! See https://github.com/nodejs/node-addon-api/pull/361
 X self()
 - Start epmd automatically
+- Use bindings on requiring the native erlInterface build
