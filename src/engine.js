@@ -1,7 +1,10 @@
+const util = require('util');
+const { execFile } = require('child_process');
 const erlInterface = require('../build/Release/erlInterface.node');
 const binary_to_term = require('../../erlang.js/api.js').binary_to_term;
 const term_to_binary = require('../../erlang.js/api.js').term_to_binary;
 const { is_tuple, get_tuple, set_tuple, set_atom, is_reference } = require('../../erlang.js/api.js');;
+const execF = util.promisify(execFile);
 
 class ErlNode {
   constructor(cookie, nodeName, port, acceptCallback) {
@@ -20,8 +23,10 @@ class ErlNode {
     this._Ref_ID = [0, 0, 0];
     this._references = new Map();
 
-    this._cnode.server(port || 0);
-    this._acceptLoop();
+    execF('epmd', ['-daemon']).then(() => {
+      this._cnode.server(port || 0);
+      this._acceptLoop();
+    });
   }
   // Private method
   _connect (nodeName) {

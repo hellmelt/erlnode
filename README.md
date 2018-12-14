@@ -31,10 +31,12 @@ See the code in directory test, and the "public" methods in engine.js.
 
 ## Automatic tests
 ### Prerequisites
+Erlang binaries in the PATH (erl, erlc, epmd).
+
 Compile the erlang modules
 ```
 cd test
-erlc *teste*.erl
+erlc *.erl
 ```
 ### Run the tests
 ```
