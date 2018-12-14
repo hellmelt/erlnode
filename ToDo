@@ -18,3 +18,4 @@ X Use MakeCallback() instead of Call()? - No! See https://github.com/nodejs/node
 X self()
 X Start epmd automatically
 - Implement net_kernel
+- Use bindings on requiring the native erlInterface build
