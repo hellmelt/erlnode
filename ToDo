@@ -17,5 +17,6 @@ X automated tests
 X Use MakeCallback() instead of Call()? - No! See https://github.com/nodejs/node-addon-api/pull/361
 X self()
 X Start epmd automatically
-- Implement net_kernel
-- Use bindings on requiring the native erlInterface build
+x Implement net_kernel is_auth
+x Use bindings on requiring the native erlInterface build
+- Resolve the issues around string. List of small ints vs. "real" string. Can the difference be told?

@@ -1,6 +1,8 @@
 const util = require('util');
 const { execFile } = require('child_process');
-const erlInterface = require('../build/Release/erlInterface.node');
+const erlInterface = require('bindings')('erlInterface.node');
+const NetKernel = require('./net_kernel');
+const Rex = require('./rex');
 const binary_to_term = require('../../erlang.js/api.js').binary_to_term;
 const term_to_binary = require('../../erlang.js/api.js').term_to_binary;
 const { is_tuple, get_tuple, set_tuple, set_atom, is_reference } = require('../../erlang.js/api.js');;
@@ -22,6 +24,9 @@ class ErlNode {
     this.registeredNames = {};
     this._Ref_ID = [0, 0, 0];
     this._references = new Map();
+
+    this.register('net_kernel', new NetKernel());
+    this.register('rex', new Rex());
 
     execF('epmd', ['-daemon']).then(() => {
       this._cnode.server(port || 0);
