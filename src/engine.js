@@ -1,7 +1,8 @@
 const erlInterface = require('../build/Release/erlInterface.node');
 const binary_to_term = require('../../erlang.js/api.js').binary_to_term;
 const term_to_binary = require('../../erlang.js/api.js').term_to_binary;
-const { is_tuple, get_tuple, tuple_length, set_tuple, is_atom, get_atom, set_atom, is_pid, is_reference } = require('./types');;
+const { is_tuple, get_tuple, tuple_length, set_tuple, is_atom, get_atom, set_atom, is_pid, is_reference } = require('./types');
+const { execSync } = require('child_process');
 
 class ErlNode {
   constructor(cookie, nodeName, port, acceptCallback) {
@@ -11,6 +12,9 @@ class ErlNode {
         cookie: cookie,
         thisNodeName: nodeName
       });
+
+    execSync('epmd -daemon');
+
     // Todo: These members should be private
     this.persistentReceiveCallbacks = [];
     this.receiveCallbacks = [];
@@ -59,10 +63,14 @@ class ErlNode {
             this.references.delete(this.get_ref_key(ref));
           }
         }
+        try {
         if (typeof this.registeredNames[to] === 'function') {
           this.registeredNames[to](this, from, data);
         } else if (typeof this.registeredNames[to] === 'object' && typeof this.registeredNames[to].receive === 'function') {
           this.registeredNames[to].receive(this, from, data);
+        }
+        } catch(err) {
+          throw new Error('Failed in call to registred server:');
         }
 
         for (let i = 0; i < this.persistentReceiveCallbacks.length; i++) {
@@ -161,7 +169,7 @@ class ErlNode {
   }
 
   make_ref () {
-    const new_ref = {n: {node: this.self().p.node, creation: this.creation(), 
+    const new_ref = {n: {node: this.self().p.node, creation: this.creation(),
     ID: this.Ref_ID.slice()}};
     if (++this.Ref_ID[0] > (Math.pow(2, 18) - 1)) {
       this.Ref_ID[0] = 0;
@@ -189,7 +197,7 @@ class ErlNode {
       const data = set_tuple([set_atom('$gen_call'), set_tuple([this.self(), ref]), term]);
       this.regSend(to, node, data);
       this.references.set(this.get_ref_key(ref), resolve);
-    }); 
+    });
   }
 
   cast (to, node, term) {
