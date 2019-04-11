@@ -1,4 +1,4 @@
-const gen_server = require('./gen_server');
+const gen_server = require('../src/gen_server');
 const _ = require('lodash');
 
 class Lodash extends gen_server {
