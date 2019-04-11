@@ -11,9 +11,9 @@ X implement decoding in erlang.js
 - Implement rpc
 X Implement disconnect
 X Create api, hiding binary_to_term
-- Create a cnode gen_server
+X Create a cnode gen_server
 X automated tests
 - Use timeout versions of ei-functions
 X Use MakeCallback() instead of Call()? - No! See https://github.com/nodejs/node-addon-api/pull/361
 X self()
-- Start epmd automatically
+X Start epmd automatically

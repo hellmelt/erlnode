@@ -1,7 +1,12 @@
 const tap = require('tap');
 const gen_server = require('../src/gen_server');
 const ErlNode = require('../src/engine.js');
-const erlnode = new ErlNode('Oreo', 'js');
+const erlang_node = require('./helpers/start_erlang').erlang_node;
+const hostname = require('os').hostname;
+
+const erlnode = new ErlNode('Oreo', 'js1', 0); // , (conn, node) => console.log('Connected: ', conn, node));
+// erlnode.receiveCallback((from, to, data) => console.log('Received: ', from, to, data));
+const nodename = 'js1@' + hostname().toLowerCase().split('.')[0];
 
 class Accu extends gen_server {
 
@@ -10,21 +15,42 @@ class Accu extends gen_server {
     this.accumulator = seed;
   }
   handle_call_add (...data) {
-    console.log('add, data: ', data, this.accumulator);
     if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
       this.accumulator += data[0];
-      console.log(this.accumulator);
       return this.accumulator;
     }
-    return set_tuple([set_atom('error'), "Bad format to call add"]);
-  };
-  handle_cast_someFunc (...data) {
-    console.log(data);
+    return set_tuple([set_atom('error'), 'Bad format to call add']);
+  }
+
+  handle_call_subtract (...data) {
+    if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
+      this.accumulator -= data[0];
+      return this.accumulator;
+    }
+    return set_tuple([set_atom('error'), 'Bad format to call subtract']);
+  }
+
+  handle_cast_add (...data) {
+    if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
+      this.accumulator += data[0];
+    }
+  }
+
+  handle_cast_subtract (...data) {
+    if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
+      this.accumulator -= data[0];
+    }
   }
 }
 
 tap.test('Receive call and cast to js gen_server', (ct) => {
-  // ct.plan(5);
+   ct.plan(1);
   const acc = new Accu(0);
   erlnode.register('accumulator', acc);
+  erlang_node('e1', 'Oreo', 'test_gen_server', 'run_test', nodename,
+    (res) => {
+      erlnode.unpublish();
+      ct.equal(res, null, 'Erlang gen_server exited as expected');
+      ct.end();
+    });
 });
