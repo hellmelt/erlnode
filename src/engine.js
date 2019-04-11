@@ -1,8 +1,10 @@
-const erlInterface = require('../build/Release/erlInterface.node');
 const binary_to_term = require('../../erlang.js/api.js').binary_to_term;
 const term_to_binary = require('../../erlang.js/api.js').term_to_binary;
-const { is_tuple, get_tuple, tuple_length, set_tuple, is_atom, get_atom, set_atom, is_pid, is_reference } = require('./types');
+const { is_tuple, get_tuple, tuple_length, set_tuple, is_atom, get_atom, set_atom, is_pid, is_reference } = require('../../erlang.js/api');
 const { execSync } = require('child_process');
+const erlInterface = require('bindings')('erlInterface.node');
+const NetKernel = require('./net_kernel');
+const Rex = require('./rex');
 
 class ErlNode {
   constructor(cookie, nodeName, port, acceptCallback) {
@@ -23,6 +25,9 @@ class ErlNode {
     this.registeredNames = {};
     this.Ref_ID = [0, 0, 0];
     this.references = new Map();
+
+    this.register('net_kernel', new NetKernel());
+    this.register('rex', new Rex());
 
     this.cnode.server(port || 0);
     this.acceptLoop();
