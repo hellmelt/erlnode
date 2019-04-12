@@ -44,7 +44,7 @@ code:root_dir().
 
 ## How to use
 
-See the code in directory test, and the "public" methods in engine.js.
+See the code in directory test, and the "public" methods in index.js.
 
 ## Automatic tests
 
@@ -54,7 +54,7 @@ Compile the erlang modules
 
 ```
 cd test
-erlc *teste*.erl
+erlc *.erl
 ```
 
 ### Run the tests

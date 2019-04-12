@@ -24,8 +24,12 @@ class Accu extends gen_server {
 
   handle_call_subtract (...data) {
     if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
-      this.accumulator -= data[0];
-      return this.accumulator;
+      return new Promise((res) => {
+        setTimeout(() => {
+          this.accumulator -= data[0];
+          res(this.accumulator);
+        }, 100);
+      })
     }
     return set_tuple([set_atom('error'), 'Bad format to call subtract']);
   }

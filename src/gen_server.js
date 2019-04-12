@@ -43,14 +43,14 @@ class gen_server {
     return { func, args };
   }
 
-  handleCall (erlNode, [from, data]) {
+  async handleCall (erlNode, [from, data]) {
     let { func, args } = this.getFunc(data);
     let reply;
     const funcname = 'handle_call_' + func;
     if (func && typeof this[funcname] === 'function') {
-      reply = this[funcname].apply(this, args);
+      reply = await this[funcname].apply(this, args);
     } else {
-      reply = this.handle_call(data);
+      reply = await this.handle_call(data);
     }
     let tFrom;
     if (tFrom = get_tuple(from)) {

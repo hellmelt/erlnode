@@ -6,7 +6,7 @@ X Receive should contain info from erlang_msg
 X Implement send
 X act as a server
 - long host names
-- ei_x functions rather than just ei_
+X ei_x functions rather than just ei_
 X implement decoding in erlang.js
 - Implement rpc
 X Implement disconnect
@@ -17,3 +17,4 @@ X automated tests
 X Use MakeCallback() instead of Call()? - No! See https://github.com/nodejs/node-addon-api/pull/361
 X self()
 X Start epmd automatically
+X Ensure gen_server works with async operations
