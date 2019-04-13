@@ -14,19 +14,19 @@ class Accu extends gen_server {
     super();
     this.accumulator = seed;
   }
-  handle_call_add (...data) {
-    if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
-      this.accumulator += data[0];
+  handle_call_add (data) {
+    if (typeof data === 'number') {
+      this.accumulator += data;
       return this.accumulator;
     }
     return set_tuple([set_atom('error'), 'Bad format to call add']);
   }
 
-  handle_call_subtract (...data) {
-    if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
+  handle_call_subtract (data) {
+    if (typeof data === 'number') {
       return new Promise((res) => {
         setTimeout(() => {
-          this.accumulator -= data[0];
+          this.accumulator -= data;
           res(this.accumulator);
         }, 100);
       })
@@ -34,15 +34,15 @@ class Accu extends gen_server {
     return set_tuple([set_atom('error'), 'Bad format to call subtract']);
   }
 
-  handle_cast_add (...data) {
-    if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
-      this.accumulator += data[0];
+  handle_cast_add (data) {
+    if (typeof data === 'number') {
+      this.accumulator += data;
     }
   }
 
-  handle_cast_subtract (...data) {
-    if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'number') {
-      this.accumulator -= data[0];
+  handle_cast_subtract (data) {
+    if (typeof data === 'number') {
+      this.accumulator -= data;
     }
   }
 }
@@ -54,7 +54,7 @@ tap.test('Receive call and cast to js gen_server', (ct) => {
   erlang_node('e1', 'Oreo', 'test_gen_server', 'run_test', nodename,
     (res) => {
       erlnode.unpublish();
-      ct.equal(res, null, 'Erlang gen_server exited as expected');
+      ct.equal(res, null, 'Erlang process exited as expected');
       ct.end();
     });
 });

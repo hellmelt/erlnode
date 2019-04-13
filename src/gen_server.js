@@ -44,13 +44,18 @@ class gen_server {
   }
 
   async handleCall (erlNode, [from, data]) {
-    let { func, args } = this.getFunc(data);
     let reply;
-    const funcname = 'handle_call_' + func;
-    if (func && typeof this[funcname] === 'function') {
-      reply = await this[funcname].apply(this, args);
-    } else {
-      reply = await this.handle_call(data);
+    try {
+      let { func, args } = this.getFunc(data);
+      const funcname = 'handle_call_' + func;
+      if (func && typeof this[funcname] === 'function') {
+        reply = await this[funcname].apply(this, args);
+      } else {
+        reply = await this.handle_call(data);
+      }
+    }
+    catch (err) {
+      reply = set_tuple([set_atom('error'), set_tuple([err.name, err.message])]);
     }
     let tFrom;
     if (tFrom = get_tuple(from)) {
@@ -65,12 +70,17 @@ class gen_server {
   }
 
   handleCast ([data]) {
-    let {func, args} = this.getFunc(data);
-    const funcname = 'handle_cast_' + func;
-    if (func && typeof this[funcname] === 'function') {
-      this[funcname].apply(this, args);
-    } else {
-      this.handle_cast(data);
+    try{
+      let {func, args} = this.getFunc(data);
+      const funcname = 'handle_cast_' + func;
+      if (func && typeof this[funcname] === 'function') {
+        this[funcname].apply(this, args);
+      } else {
+        this.handle_cast(data);
+      }
+    }
+    catch (err) {
+      console.log(`gen_server cast error: ${err.name}, ${err.message}`);
     }
   }
   handle_cast (data) {
