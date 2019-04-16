@@ -6,7 +6,7 @@ const erlInterface = require('bindings')('erlInterface.node');
 const NetKernel = require('./net_kernel');
 const Rex = require('./rex');
 
-class ErlNode {
+class CNodeEngine {
   constructor(cookie, nodeName, port, acceptCallback) {
     // Todo: The cnode should be a private property
     this.cnode = new erlInterface.CNode(
@@ -196,6 +196,7 @@ class ErlNode {
     return str;
   }
 
+  // gen_server call
   call (to, node, term) {
     return new Promise((resolve, reject) => {
       const ref = this.make_ref();
@@ -205,10 +206,11 @@ class ErlNode {
     });
   }
 
+  // gen_server cast
   cast (to, node, term) {
     const data = set_tuple([set_atom('$gen_cast'), term]);
     this.regSend(to, node, data);
   }
 }
 
-module.exports = ErlNode;
+module.exports = CNodeEngine;

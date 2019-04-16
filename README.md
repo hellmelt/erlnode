@@ -3,11 +3,11 @@
 Erlang cnode functionality based on encapsulating erl_interface C
 library using napi and node-addon-api.
 
-This project is alpha. You can create erlang cnodes in node, send and
-receive terms. Connect and accept connections from other erlang nodes
-are managed internally. The gen_server class can be extended to
-implement a "gen_server look-alike". There is
-also code for client calls and casts to erlang gen_servers.
+This project is beta. You can create erlang cnodes in node, send and
+receive terms. Connections to and from other erlang nodes are managed
+internally. A gen_server class can be extended to implement a
+"gen_server look-alike". There is also code for client calls and casts
+to erlang gen_servers.
 
 The node add-on encapsulates some erl_interface functions. The stuff
 that makes things tick is implemented in JavaScript.

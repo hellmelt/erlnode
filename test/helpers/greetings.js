@@ -15,4 +15,11 @@ function sayGood() {
     })
 }
 
-module.exports = { sayHello, setGlobalTime, sayGood };
+function quit() {
+  return new Promise((res) => {
+    setTimeout(() => {
+      res({a: 'ok'})}, 8000);
+  })
+}
+
+module.exports = { sayHello, setGlobalTime, sayGood, quit };

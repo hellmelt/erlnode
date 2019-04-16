@@ -28,4 +28,6 @@ run_test([NodeStr]) ->
                    _ -> 2
                end,
 
+    rpc:call(Node, Module, quit, 10000),
+
     init:stop(RetCode1 + RetCode2).
